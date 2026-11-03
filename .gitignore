@@ -36,3 +36,7 @@ credentials.json
 
 # Editor-specific local settings
 .vscode/
+
+# Semantic search generated data, vector indexes,
+# embeddings, query caches, and execution records
+semantic_search/data/
