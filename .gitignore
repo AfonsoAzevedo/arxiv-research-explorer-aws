@@ -1,0 +1,38 @@
+# Python virtual environments
+.venv/
+venv/
+env/
+
+# Python cache and build files
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+build/
+dist/
+
+# Local datasets and generated artifacts
+data/
+test_data/
+artifacts/
+models/
+checkpoints/
+
+# Jupyter checkpoints
+.ipynb_checkpoints/
+
+# Environment variables and credentials
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+credentials.json
+
+# macOS
+.DS_Store
+
+# Editor-specific local settings
+.vscode/
