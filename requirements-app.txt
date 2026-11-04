@@ -1,0 +1,13 @@
+# Streamlit application
+streamlit==1.66.1
+pyarrow==26.0.1
+
+# Research paper classification
+scikit-learn==1.9.1
+numpy==2.5.4
+scipy==1.18.1
+joblib==1.6.0
+
+# Semantic search and AWS integration
+faiss-cpu==1.15.1
+boto3==1.43.123
