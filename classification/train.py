@@ -15,6 +15,7 @@ Important:
 import argparse
 import hashlib
 import json
+import os
 from datetime import datetime, timezone
 from collections import Counter
 from pathlib import Path
@@ -302,12 +303,22 @@ def main():
         action="store_true",
         help="Reserved for an explicitly authorized EC2 run.",
     )
+    parser.add_argument(
+        "--approval-token",
+        default=None,
+        help="Confirmation required for authorized full training.",
+    )
     args = parser.parse_args()
 
+    # Require explicit approval and prevent conflicting modes.
     if args.full_train:
-        raise RuntimeError(
-            "FULL TRAINING DISABLED: EC2 authorization pending."
+        if args.pilot or args.dry_run or args.max_examples:
+            raise ValueError("Full training cannot use pilot options.")
+        verify_production_authorization(
+            args.full_train, args.approval_token
         )
+    elif args.approval_token is not None:
+        raise ValueError("Approval token requires --full-train.")
 
     if args.pilot and not (1 <= args.max_examples <= 800):
         raise ValueError(
@@ -341,6 +352,55 @@ def main():
 
     if args.dry_run:
         print("\nDRY RUN PASSED: No model was fitted or saved.")
+        return
+
+    if args.full_train:
+        # Confirm that training uses the exact approved dataset.
+        verification = verify_production_training_inputs(
+            texts, labels, paper_ids
+        )
+        print("PRODUCTION DATASET VERIFIED", flush=True)
+        print(json.dumps(verification, indent=2), flush=True)
+
+        # Never replace artifacts from an existing experiment.
+        output_dir = (
+            CLASSIFICATION_DIR
+            / "models"
+            / f"full_40000_seed{RANDOM_SEED}"
+        )
+        if os.path.lexists(output_dir):
+            raise FileExistsError(
+                f"Production output already exists: {output_dir}"
+            )
+
+        # Reuse the pipeline verified during Gate 1.
+        print("STARTING FULL TRAINING", flush=True)
+        pipeline, diagnostics = train_with_diagnostics(
+            pipeline, texts, labels
+        )
+
+        # Record measured diagnostics and reproducibility details.
+        metadata = reproducibility_metadata(
+            TRAIN_PATH,
+            RANDOM_SEED,
+            pipeline,
+            paper_ids,
+            labels,
+            texts,
+        )
+        metadata["run_type"] = "full_40000_production"
+        metadata["training_records"] = len(texts)
+
+        paths = save_training_artifacts(
+            pipeline, diagnostics, metadata, output_dir
+        )
+
+        print("TRAINING DIAGNOSTICS", flush=True)
+        print(json.dumps(diagnostics, indent=2), flush=True)
+        print("Saved artifacts:", flush=True)
+        for name, location in paths.items():
+            print(f"{name}: {location}", flush=True)
+        print("FULL TRAINING COMPLETED", flush=True)
         return
 
     if args.pilot:
