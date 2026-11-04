@@ -1,0 +1,20 @@
+# DS483 classification training environment
+# Target: Ubuntu 24.04, CPython 3.12, Linux x86-64
+# Dependency resolution verified locally on November 4, 2026.
+# Linux installation and execution are not yet verified.
+
+numpy==2.5.4
+scipy==1.18.1
+scikit-learn==1.9.1
+joblib==1.6.0
+threadpoolctl==3.7.0
+narwhals==2.28.0
+cloudpickle==3.1.2
+
+boto3==1.43.123
+botocore==1.43.123
+s3transfer==0.19.3
+jmespath==1.1.0
+python-dateutil==2.9.0.post0
+urllib3==2.8.0
+six==1.17.0

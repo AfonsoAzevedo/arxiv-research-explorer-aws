@@ -1,0 +1,10 @@
+{
+  "bucket": "ds483-arxiv-test",
+  "input_objects": {
+    "train.jsonl": "classification/data/train.jsonl",
+    "validation.jsonl": "classification/data/validation.jsonl"
+  },
+  "model_output_prefix": "classification/models/",
+  "region": "us-east-1",
+  "schema_version": 1
+}

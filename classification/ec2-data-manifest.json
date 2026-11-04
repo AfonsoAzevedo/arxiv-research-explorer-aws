@@ -1,0 +1,18 @@
+{
+  "aws_region": "us-east-1",
+  "datasets": {
+    "train.jsonl": {
+      "purpose": "training",
+      "records": 40000,
+      "sha256": "d1aac2d0b524edda20cd8acf971a71d771c863523396d4b8c8db59ac6a985d29",
+      "size_bytes": 58052946
+    },
+    "validation.jsonl": {
+      "purpose": "validation",
+      "records": 77187,
+      "sha256": "33ea85f638606a4780c149bd348dd9256056c7d18feb48ff7b6e978cf8f9a138",
+      "size_bytes": 122569012
+    }
+  },
+  "schema_version": 1
+}

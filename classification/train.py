@@ -205,6 +205,80 @@ def build_pipeline():
     ])
 
 
+def verify_production_training_inputs(texts, labels, paper_ids):
+    """Verify production inputs without fitting a model."""
+
+    expected_records = 40000
+    expected_per_category = 5000
+    expected_sha256 = (
+        "d1aac2d0b524edda20cd8acf971a71d771c863523396d4b8c8db59ac6a985d29"
+    )
+
+    if not (
+        len(texts) == len(labels) == len(paper_ids) == expected_records
+    ):
+        raise ValueError("Production training requires exactly 40,000 records.")
+
+    counts = Counter(labels)
+
+    if set(counts) != EXPECTED_CATEGORIES:
+        raise ValueError("Production training categories do not match.")
+
+    if any(count != expected_per_category for count in counts.values()):
+        raise ValueError("Production training category balance is incorrect.")
+
+    if len(set(paper_ids)) != expected_records:
+        raise ValueError("Duplicate paper IDs in production training inputs.")
+
+    actual_sha256 = hashlib.sha256()
+
+    with TRAIN_PATH.open("rb") as stream:
+        for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+            actual_sha256.update(chunk)
+
+    if actual_sha256.hexdigest() != expected_sha256:
+        raise ValueError("Production training file checksum mismatch.")
+
+    # Confirm the actual inputs match the verified source file
+    # exactly, including record order and abstract contents.
+    verified_texts, verified_labels, verified_ids = load_training_data(
+        TRAIN_PATH
+    )
+
+    if (
+        texts != verified_texts
+        or labels != verified_labels
+        or paper_ids != verified_ids
+    ):
+        raise ValueError(
+            "Production training inputs differ from verified source data."
+        )
+
+    return {
+        "records": expected_records,
+        "categories": dict(sorted(counts.items())),
+        "training_file_sha256": actual_sha256.hexdigest(),
+    }
+
+
+def verify_production_authorization(full_train, approval_token):
+    """Validate explicit production-training authorization."""
+
+    expected_token = "DS483_APPROVE_40000_TRAINING"
+
+    if not full_train:
+        raise PermissionError(
+            "Production training requires --full-train."
+        )
+
+    if approval_token != expected_token:
+        raise PermissionError(
+            "Production training approval token missing or incorrect."
+        )
+
+    return True
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument(
