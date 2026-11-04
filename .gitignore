@@ -40,3 +40,6 @@ credentials.json
 # Semantic search generated data, vector indexes,
 # embeddings, query caches, and execution records
 semantic_search/data/
+
+# Local backups of generated research artifacts
+backups/
