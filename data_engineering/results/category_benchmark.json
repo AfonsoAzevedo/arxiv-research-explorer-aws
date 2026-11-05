@@ -1,0 +1,27 @@
+{
+  "experiment": "Primary-category frequency query",
+  "date": "2026-11-04",
+  "region": "us-east-1",
+  "database": "ds483_test",
+  "total_records": 3233620,
+  "result_reuse_disabled": true,
+  "jsonl": {
+    "table": "papers_raw",
+    "query_id": "512fe4bf-fbb2-4380-82aa-ed07ebf1dbc1",
+    "bytes_scanned": 5667856783,
+    "engine_execution_ms": 2068,
+    "total_execution_ms": 2295
+  },
+  "parquet": {
+    "table": "papers_parquet",
+    "query_id": "25980562-1af4-4f36-97a8-3e9d65e0cd1a",
+    "bytes_scanned": 9417392,
+    "engine_execution_ms": 757,
+    "total_execution_ms": 950
+  },
+  "validation": {
+    "top_10_category_results_match": true,
+    "data_scan_reduction_percent": 99.83,
+    "execution_time_reduction_percent": 58.61
+  }
+}
