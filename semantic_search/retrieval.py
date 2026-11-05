@@ -13,7 +13,7 @@ DIMENSIONS = 512
 
 
 class SemanticRetriever:
-    def __init__(self, index_size=312):
+    def __init__(self, index_size=312, corpus_path=None):
         if type(index_size) is not int or index_size not in SUPPORTED_INDEX_SIZES:
             raise ValueError("Supported index sizes: 312 or 368")
 
@@ -34,7 +34,12 @@ class SemanticRetriever:
         wanted = set(self.paper_ids)
         self.papers = {}
 
-        with CORPUS_PATH.open(encoding="utf-8") as file:
+        # Allow a smaller metadata file while keeping the original default.
+        selected_corpus = (
+            Path(corpus_path) if corpus_path is not None else CORPUS_PATH
+        )
+
+        with selected_corpus.open(encoding="utf-8") as file:
             for line in file:
                 paper = json.loads(line)
                 pid = paper["paper_id"]

@@ -21,6 +21,7 @@ CACHE_DIR = (
 )
 
 INDEX_SIZE = 368
+CORPUS_PATH = PROJECT_ROOT / "semantic_search/data/application_368.jsonl"
 
 
 def load_search_service():
@@ -35,6 +36,7 @@ def load_search_service():
     return OfflineQueryService(
         cache_dir=CACHE_DIR,
         index_size=INDEX_SIZE,
+        corpus_path=CORPUS_PATH,
     )
 
 

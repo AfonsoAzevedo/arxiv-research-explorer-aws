@@ -15,9 +15,14 @@ class QueryNotCached(RuntimeError):
 class OfflineQueryService:
     """Perform semantic retrieval using existing cached embeddings."""
 
-    def __init__(self, cache_dir, index_size=312):
+    def __init__(self, cache_dir, index_size=312, corpus_path=None):
         self.cache_dir = Path(cache_dir)
-        self.retriever = SemanticRetriever(index_size=index_size)
+
+        # Use a custom metadata file when one is provided.
+        self.retriever = SemanticRetriever(
+            index_size=index_size,
+            corpus_path=corpus_path,
+        )
 
     def search(self, query, top_k=5):
         query = validate_query(query)
