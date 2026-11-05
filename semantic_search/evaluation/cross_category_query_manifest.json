@@ -1,0 +1,135 @@
+{
+  "evaluation_id": "cross_category_v1",
+  "selection_seed": "DS483-cross-category-evaluation-v1",
+  "selection_method": "minimum_sha256_per_original_sampling_group",
+  "source_mapping_sha256": "e8032b969ebfa0c6e5ffbced3dce58ed16321492c9221d7b94ce6bf5e53981c6",
+  "source_corpus_sha256": "3e2679c47a04166467ea3b848748787fe4fea62993568fc485eb891e0c639a7c",
+  "query_count": 10,
+  "top_k": 5,
+  "query_source": "original_312_paper_embeddings",
+  "exclude_query_paper": true,
+  "comparison_indexes": [
+    312,
+    368
+  ],
+  "selection_independent_of_cybersecurity_expansion": true,
+  "limitations": [
+    "Queries use existing indexed paper embeddings.",
+    "Self-matches must be excluded.",
+    "Category agreement is only a relevance proxy.",
+    "Independent human judgments are needed for quality claims.",
+    "Targeted expansion is not representative of general corpus growth."
+  ],
+  "queries": [
+    {
+      "query_id": "2308.05563",
+      "sampling_group": "cs.AI",
+      "title": "Recent Advancements In The Field Of Deepfake Detection",
+      "categories": [
+        "cs.AI",
+        "cs.CY"
+      ],
+      "query_type": "existing_paper_embedding",
+      "exclude_self": true
+    },
+    {
+      "query_id": "2411.00964",
+      "sampling_group": "cs.CL",
+      "title": "Generic Embedding-Based Lexicons for Transparent and Reproducible Text Scoring",
+      "categories": [
+        "cs.CL"
+      ],
+      "query_type": "existing_paper_embedding",
+      "exclude_self": true
+    },
+    {
+      "query_id": "2606.18198",
+      "sampling_group": "cs.CR",
+      "title": "Seeing Is Not Screening: Multimodal Hidden Instruction Attacks on Agent Skill Scanners",
+      "categories": [
+        "cs.CR",
+        "cs.CV"
+      ],
+      "query_type": "existing_paper_embedding",
+      "exclude_self": true
+    },
+    {
+      "query_id": "2203.07000",
+      "sampling_group": "cs.CV",
+      "title": "Cross-View-Prediction: Exploring Contrastive Feature for Hyperspectral Image Classification",
+      "categories": [
+        "cs.CV"
+      ],
+      "query_type": "existing_paper_embedding",
+      "exclude_self": true
+    },
+    {
+      "query_id": "2509.02457",
+      "sampling_group": "cs.DC",
+      "title": "Safe Memory Reclamation Techniques",
+      "categories": [
+        "cs.DC",
+        "cs.DS",
+        "cs.PF",
+        "cs.PL"
+      ],
+      "query_type": "existing_paper_embedding",
+      "exclude_self": true
+    },
+    {
+      "query_id": "2107.07786",
+      "sampling_group": "cs.IR",
+      "title": "DoReMi: First glance at a universal OMR dataset",
+      "categories": [
+        "cs.IR",
+        "cs.CV",
+        "cs.MM"
+      ],
+      "query_type": "existing_paper_embedding",
+      "exclude_self": true
+    },
+    {
+      "query_id": "2206.00832",
+      "sampling_group": "cs.LG",
+      "title": "Fast Benchmarking of Accuracy vs. Training Time with Cyclic Learning Rates",
+      "categories": [
+        "cs.LG"
+      ],
+      "query_type": "existing_paper_embedding",
+      "exclude_self": true
+    },
+    {
+      "query_id": "1407.0051",
+      "sampling_group": "cs.RO",
+      "title": "Hands-on experiments on intelligent behavior for mobile robots",
+      "categories": [
+        "cs.RO"
+      ],
+      "query_type": "existing_paper_embedding",
+      "exclude_self": true
+    },
+    {
+      "query_id": "1512.07568",
+      "sampling_group": "stat.ME",
+      "title": "Efficient Bayesian hierarchical functional data analysis with basis function approximations using Gaussian-Wishart processes",
+      "categories": [
+        "stat.ME"
+      ],
+      "query_type": "existing_paper_embedding",
+      "exclude_self": true
+    },
+    {
+      "query_id": "1207.3438",
+      "sampling_group": "stat.ML",
+      "title": "MahNMF: Manhattan Non-negative Matrix Factorization",
+      "categories": [
+        "stat.ML",
+        "cs.LG",
+        "cs.NA",
+        "math.NA"
+      ],
+      "query_type": "existing_paper_embedding",
+      "exclude_self": true
+    }
+  ]
+}

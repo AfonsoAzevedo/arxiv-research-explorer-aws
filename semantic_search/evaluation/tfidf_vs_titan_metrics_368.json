@@ -1,0 +1,158 @@
+{
+  "experiment": "tfidf_vs_titan_matched_368_v1",
+  "query_count": 10,
+  "corpus_size": 368,
+  "judgments_count": 174,
+  "judgment_provenance": "AI-proposed, user-approved",
+  "relevant_threshold": "grade >= 1",
+  "ndcg_gain": "2^grade - 1",
+  "ndcg_ideal": "pooled top-10 relevance judgments",
+  "approved_csv_sha256": "831985f4d01a239a25ae94608eb1b3543974761549232b3f267edf32320d7417",
+  "rankings_sha256": "26e3ec4eb88a3a632e5e430f9e582e44c18dfe65a0792cbf0d892e93d9ee9bf8",
+  "summary": {
+    "precision_at_5": {
+      "tfidf_mean": 0.54,
+      "titan_mean": 0.62,
+      "mean_difference_titan_minus_tfidf": 0.07999999999999996,
+      "tfidf_wins": 1,
+      "titan_wins": 4,
+      "ties": 5
+    },
+    "ndcg_at_10": {
+      "tfidf_mean": 0.6315370704574088,
+      "titan_mean": 0.6371650077419972,
+      "mean_difference_titan_minus_tfidf": 0.005627937284588436,
+      "tfidf_wins": 4,
+      "titan_wins": 6,
+      "ties": 0
+    }
+  },
+  "per_query": [
+    {
+      "query_id": "2308.05563",
+      "sampling_group": "cs.AI",
+      "tfidf": {
+        "precision_at_5": 0.2,
+        "ndcg_at_10": 0.6422813708518126
+      },
+      "titan": {
+        "precision_at_5": 0.4,
+        "ndcg_at_10": 0.553486104522623
+      }
+    },
+    {
+      "query_id": "2411.00964",
+      "sampling_group": "cs.CL",
+      "tfidf": {
+        "precision_at_5": 0.6,
+        "ndcg_at_10": 0.7498115763141904
+      },
+      "titan": {
+        "precision_at_5": 1.0,
+        "ndcg_at_10": 0.86482718877179
+      }
+    },
+    {
+      "query_id": "2606.18198",
+      "sampling_group": "cs.CR",
+      "tfidf": {
+        "precision_at_5": 0.6,
+        "ndcg_at_10": 0.5857116749196571
+      },
+      "titan": {
+        "precision_at_5": 0.6,
+        "ndcg_at_10": 0.7808654863931007
+      }
+    },
+    {
+      "query_id": "2203.07000",
+      "sampling_group": "cs.CV",
+      "tfidf": {
+        "precision_at_5": 0.8,
+        "ndcg_at_10": 0.7329600956513468
+      },
+      "titan": {
+        "precision_at_5": 0.8,
+        "ndcg_at_10": 0.6303138095568471
+      }
+    },
+    {
+      "query_id": "2509.02457",
+      "sampling_group": "cs.DC",
+      "tfidf": {
+        "precision_at_5": 0.2,
+        "ndcg_at_10": 0.3903800499921017
+      },
+      "titan": {
+        "precision_at_5": 0.2,
+        "ndcg_at_10": 0.407591902495008
+      }
+    },
+    {
+      "query_id": "2107.07786",
+      "sampling_group": "cs.IR",
+      "tfidf": {
+        "precision_at_5": 0.2,
+        "ndcg_at_10": 0.5078961547485289
+      },
+      "titan": {
+        "precision_at_5": 0.2,
+        "ndcg_at_10": 0.5205067333228022
+      }
+    },
+    {
+      "query_id": "2206.00832",
+      "sampling_group": "cs.LG",
+      "tfidf": {
+        "precision_at_5": 0.6,
+        "ndcg_at_10": 0.5430451279396235
+      },
+      "titan": {
+        "precision_at_5": 1.0,
+        "ndcg_at_10": 0.9236550512190201
+      }
+    },
+    {
+      "query_id": "1407.0051",
+      "sampling_group": "cs.RO",
+      "tfidf": {
+        "precision_at_5": 0.6,
+        "ndcg_at_10": 0.6030270019329507
+      },
+      "titan": {
+        "precision_at_5": 0.8,
+        "ndcg_at_10": 0.5321582087990403
+      }
+    },
+    {
+      "query_id": "1512.07568",
+      "sampling_group": "stat.ME",
+      "tfidf": {
+        "precision_at_5": 1.0,
+        "ndcg_at_10": 0.7445316871869128
+      },
+      "titan": {
+        "precision_at_5": 1.0,
+        "ndcg_at_10": 0.9539959859595428
+      }
+    },
+    {
+      "query_id": "1207.3438",
+      "sampling_group": "stat.ML",
+      "tfidf": {
+        "precision_at_5": 0.6,
+        "ndcg_at_10": 0.8157259650369636
+      },
+      "titan": {
+        "precision_at_5": 0.2,
+        "ndcg_at_10": 0.20424960638019765
+      }
+    }
+  ],
+  "limitations": [
+    "Ten existing-paper queries, with self-matches excluded.",
+    "Small 368-paper corpus with targeted cybersecurity expansion.",
+    "AI-proposed relevance grades approved by one user.",
+    "Pooled judgments do not cover every paper in the corpus."
+  ]
+}
