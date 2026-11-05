@@ -1,0 +1,187 @@
+{
+  "accuracy": 0.7492871169610676,
+  "balanced_accuracy": 0.765894786943618,
+  "category_order": [
+    "cs.AI",
+    "cs.CL",
+    "cs.CR",
+    "cs.CV",
+    "cs.DB",
+    "cs.LG",
+    "cs.NI",
+    "cs.RO"
+  ],
+  "class_distribution": {
+    "cs.AI": 25603,
+    "cs.CL": 33751,
+    "cs.CR": 12774,
+    "cs.CV": 55704,
+    "cs.DB": 2074,
+    "cs.LG": 54362,
+    "cs.NI": 3704,
+    "cs.RO": 19285
+  },
+  "classification_report": {
+    "accuracy": 0.7492871169610676,
+    "cs.AI": {
+      "f1-score": 0.512954745301732,
+      "precision": 0.5383294703408018,
+      "recall": 0.48986446900753816,
+      "support": 25603.0
+    },
+    "cs.CL": {
+      "f1-score": 0.6972727272727273,
+      "precision": 0.6075381196505973,
+      "recall": 0.8181090930639092,
+      "support": 33751.0
+    },
+    "cs.CR": {
+      "f1-score": 0.7851887016377878,
+      "precision": 0.7936660268714012,
+      "recall": 0.7768905589478629,
+      "support": 12774.0
+    },
+    "cs.CV": {
+      "f1-score": 0.8548005409060175,
+      "precision": 0.8962074669187146,
+      "recall": 0.8170508401551055,
+      "support": 55704.0
+    },
+    "cs.DB": {
+      "f1-score": 0.6112666200139958,
+      "precision": 0.4796814936847886,
+      "recall": 0.8423336547733847,
+      "support": 2074.0
+    },
+    "cs.LG": {
+      "f1-score": 0.7517346888417312,
+      "precision": 0.8110450876408323,
+      "recall": 0.7005077075898606,
+      "support": 54362.0
+    },
+    "cs.NI": {
+      "f1-score": 0.7438386855862584,
+      "precision": 0.6900692840646652,
+      "recall": 0.806695464362851,
+      "support": 3704.0
+    },
+    "cs.RO": {
+      "f1-score": 0.8533171643676418,
+      "precision": 0.8320441444548455,
+      "recall": 0.8757065076484314,
+      "support": 19285.0
+    },
+    "macro avg": {
+      "f1-score": 0.7262967342409865,
+      "precision": 0.7060726367033308,
+      "recall": 0.765894786943618,
+      "support": 207257.0
+    },
+    "weighted avg": {
+      "f1-score": 0.7510366843988704,
+      "precision": 0.7625092493675899,
+      "recall": 0.7492871169610676,
+      "support": 207257.0
+    }
+  },
+  "confusion_matrix": [
+    [
+      12542,
+      6806,
+      482,
+      1039,
+      587,
+      3227,
+      226,
+      694
+    ],
+    [
+      3617,
+      27612,
+      277,
+      433,
+      320,
+      1401,
+      28,
+      63
+    ],
+    [
+      592,
+      1001,
+      9924,
+      235,
+      168,
+      528,
+      260,
+      66
+    ],
+    [
+      1406,
+      3431,
+      448,
+      45513,
+      120,
+      2969,
+      98,
+      1719
+    ],
+    [
+      81,
+      133,
+      27,
+      9,
+      1747,
+      50,
+      18,
+      9
+    ],
+    [
+      4318,
+      6228,
+      1124,
+      2557,
+      647,
+      38081,
+      627,
+      780
+    ],
+    [
+      159,
+      65,
+      174,
+      44,
+      32,
+      164,
+      2988,
+      78
+    ],
+    [
+      583,
+      173,
+      48,
+      954,
+      21,
+      533,
+      85,
+      16888
+    ]
+  ],
+  "evaluated_at_utc": "2026-11-05T02:42:42.387053+00:00",
+  "evaluation": "single_final_held_out_test",
+  "limitations": [
+    "Labels represent the first listed arXiv category.",
+    "Exact duplicates were excluded; near duplicates were not audited.",
+    "Training was class-balanced; test frequencies are naturally imbalanced.",
+    "Chronological distribution shift may affect performance.",
+    "No hyperparameters or model weights were changed after validation."
+  ],
+  "macro_f1": 0.7262967342409865,
+  "majority_class": "cs.CV",
+  "majority_class_baseline": 0.2687677617643795,
+  "model_sha256": "60f84cbc1d99a9cff44bf089cec25e0ba4343575cab51ca3a3218777f83533e1",
+  "records": 207257,
+  "status": "complete",
+  "test_period": "2025-2026",
+  "test_sha256": "409f4cc11bcc9c46eb55eb20ad116173133aa9c8e5e4038c7591a9c52ec7f3c3",
+  "training_sample_sha256": "e28d9dfd3ff66539360a9dcba4409f84d0c4126207dfbdf1ca5f711eabc87df3"
+}
