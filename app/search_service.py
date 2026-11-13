@@ -7,45 +7,38 @@ the existing 368-paper FAISS index without making AWS requests.
 
 from pathlib import Path
 
-from semantic_search.query_service import (
-    OfflineQueryService,
-    QueryNotCached,
-)
+from semantic_search.query_service import OfflineQueryService
 
-
-# Locate the existing cached embeddings in the project.
+# Find the project folder so file paths work on different computers
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
-CACHE_DIR = (
-    PROJECT_ROOT
-    / "semantic_search/data/application_query_cache"
-)
 
+# Locate the previously generated query embeddings
+CACHE_DIR = PROJECT_ROOT / "semantic_search/data/application_query_cache"
+
+# Configure the 368-paper collection used for retrieval
 INDEX_SIZE = 368
 CORPUS_PATH = PROJECT_ROOT / "semantic_search/data/application_368.jsonl"
 
 
 def load_search_service():
-    """Load the existing FAISS index for offline semantic search."""
+    """Load the existing FAISS index for offline semantic search"""
 
-    # Check that the query cache exists before starting the service.
+    # Check that the query cache exists before starting the service
     if not CACHE_DIR.is_dir():
-        raise FileNotFoundError(
-            f"Semantic search cache not found: {CACHE_DIR}"
-        )
+        raise FileNotFoundError(f"Semantic search cache not found: {CACHE_DIR}")
 
     return OfflineQueryService(
-        cache_dir=CACHE_DIR,
-        index_size=INDEX_SIZE,
-        corpus_path=CORPUS_PATH,
+        cache_dir=CACHE_DIR,  # Location of saved query embeddings
+        index_size=INDEX_SIZE,  # Identifies the 368-paper collection
+        corpus_path=CORPUS_PATH,  # Location of the paper collection
     )
 
-
 def find_related_papers(service, query, top_k=5):
-    """Find related papers using an already cached query embedding."""
+    """Find related papers using an already cached query embedding"""
 
-    # Reject empty queries before searching the index.
+    # Reject empty queries before searching the index
     if not isinstance(query, str) or not query.strip():
         raise ValueError("Please enter a research topic.")
 
-    # The offline service rejects uncached queries without calling Bedrock.
+    # The offline service rejects uncached queries without calling Bedrock
     return service.search(query, top_k=top_k)

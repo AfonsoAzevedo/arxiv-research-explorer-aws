@@ -5,14 +5,18 @@ The application classifies research abstracts and finds related
 arXiv papers using a saved classifier and semantic search.
 """
 
+# Create the interactive web interface
 import streamlit as st
 
-from app.classifier_service import load_classifier, classify_abstract
-from app.search_service import load_search_service, find_related_papers
+# Import functions to load my classifier and predict categories
+from app.classifier_service import classify_abstract, load_classifier
+
+# Import functions to load search resources and retrieve related papers
+from app.search_service import find_related_papers, load_search_service
+
 from semantic_search.query_service import QueryNotCached
 
-
-# Configure the application page.
+# Configure the application page
 st.set_page_config(
     page_title="AI Research Paper Explorer",
     page_icon="📚",
@@ -20,39 +24,36 @@ st.set_page_config(
 )
 
 
-@st.cache_resource
+@st.cache_resource  # Reuse the loaded classifier across Streamlit reruns
 def get_classifier():
-    """Load the trained classification model once."""
+    """Load the trained classification model once"""
     return load_classifier()
 
 
-@st.cache_resource
+@st.cache_resource  # Reuse the loaded search resources across Streamlit reruns
 def get_search_service():
-    """Load the existing FAISS index once."""
+    """Load the existing FAISS index once"""
     return load_search_service()
 
 
-# Display the application title and description.
+# Display the application title and description
 st.title("AI Research Paper Explorer")
 
-st.caption(
-    "DS483 Cloud Computing | AWS-powered research discovery"
-)
+st.caption("DS483 Cloud Computing | AWS-powered research discovery")
 
 st.write(
     "Classify research abstracts using machine learning "
     "or discover related scientific papers using semantic search."
 )
 
-# Create a tab for each application feature.
-tab_classify, tab_search = st.tabs(
-    ["Classify Abstract", "Discover Papers"]
-)
+# Create a tab for each application feature
+tab_classify, tab_search = st.tabs(["Classify Abstract", "Discover Papers"])
 
+# Create the classification interface
 with tab_classify:
     st.subheader("Research Paper Classification")
 
-    # Accept a research abstract from the user.
+    # Accept a research abstract from the user
     abstract = st.text_area(
         "Paste a research abstract",
         height=200,
@@ -65,22 +66,22 @@ with tab_classify:
             st.warning("Please enter a research abstract.")
         else:
             try:
-                # Run the saved classifier on the submitted abstract.
+                # Run the saved classifier on the submitted abstract
                 model = get_classifier()
                 result = classify_abstract(model, abstract)
 
                 st.success(
-                    f'Predicted category: {result["category_name"]} '
-                    f'({result["category_code"]})'
+                    f"Predicted category: {result['category_name']} "
+                    f"({result['category_code']})"
                 )
 
-                # Display the three highest-scoring categories.
+                # Display the three highest-scoring categories
                 st.subheader("Top Category Predictions")
 
                 for category in result["top_categories"]:
                     st.write(
-                        f'{category["name"]} ({category["code"]}): '
-                        f'{category["probability"]:.2%}'
+                        f"{category['name']} ({category['code']}): "
+                        f"{category['probability']:.2%}"
                     )
 
                 st.caption(
@@ -100,7 +101,7 @@ with tab_classify:
 with tab_search:
     st.subheader("Semantic Paper Discovery")
 
-    # Accept a research topic from the user.
+    # Accept a research topic from the user
     query = st.text_area(
         "Describe your research topic",
         height=140,
@@ -116,13 +117,13 @@ with tab_search:
         "queries are supported. No new Bedrock requests are made."
     )
 
-    # Search only when the user submits a nonempty query.
+    # Search only when the user submits a nonempty query
     if st.button("Find Related Papers"):
         if not query.strip():
             st.warning("Please enter a research topic.")
         else:
             try:
-                # Search the 368-paper FAISS index using a cached embedding.
+                # Search the 368-paper FAISS index using a cached embedding
                 service = get_search_service()
                 results = find_related_papers(
                     service,
@@ -135,7 +136,7 @@ with tab_search:
                     "in the 368-paper search index."
                 )
 
-                # Display each paper with its metadata and arXiv link.
+                # Display each paper with its metadata and arXiv link
                 for number, paper in enumerate(results, start=1):
                     st.subheader(f"{number}. {paper['title']}")
 
@@ -145,17 +146,12 @@ with tab_search:
                     )
 
                     st.write(
-                        paper["abstract"][:400] + (
-                            "..."
-                            if len(paper["abstract"]) > 400
-                            else ""
-                        )
+                        paper["abstract"][:400]
+                        + ("..." if len(paper["abstract"]) > 400 else "")
                     )
 
-                    # Construct the arXiv link from the validated paper ID.
-                    arxiv_url = (
-                        f"https://arxiv.org/abs/{paper['paper_id']}"
-                    )
+                    # Build the arXiv link using the returned paper ID
+                    arxiv_url = f"https://arxiv.org/abs/{paper['paper_id']}"
 
                     st.link_button(
                         "View on arXiv",
@@ -181,7 +177,7 @@ with tab_search:
                     "Check the application terminal for details."
                 )
 
-# Identify the technologies used by the application.
+# Identify the technologies used by the application
 st.divider()
 
 st.caption(
