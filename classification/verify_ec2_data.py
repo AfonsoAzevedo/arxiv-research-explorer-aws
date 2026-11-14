@@ -12,6 +12,7 @@ EXPECTED_FILES = {"train.jsonl", "validation.jsonl"}
 
 
 def verify_datasets(data_dir: Path) -> None:
+    # Load the expected file sizes, checksums, and record counts
     manifest = json.loads(MANIFEST_PATH.read_text(encoding="utf-8"))
 
     if manifest.get("schema_version") != 1:
@@ -25,6 +26,7 @@ def verify_datasets(data_dir: Path) -> None:
     if set(datasets) != EXPECTED_FILES:
         raise ValueError("Unexpected dataset filenames in manifest.")
 
+    # Verify the training and validation files separately
     for filename in sorted(EXPECTED_FILES):
         path = data_dir / filename
         expected = datasets[filename]
@@ -38,6 +40,7 @@ def verify_datasets(data_dir: Path) -> None:
         if size != expected["size_bytes"]:
             raise ValueError(f"File size mismatch: {filename}")
 
+        # Calculate a SHA-256 checksum while counting records
         digest = hashlib.sha256()
         records = 0
 
@@ -46,9 +49,11 @@ def verify_datasets(data_dir: Path) -> None:
                 digest.update(line)
                 records += 1
 
+        # Reject any dataset that differs from the approved source
         if digest.hexdigest() != expected["sha256"]:
             raise ValueError(f"SHA-256 mismatch: {filename}")
 
+        # Check that the number of JSONL records is correct
         if records != expected["records"]:
             raise ValueError(f"Record count mismatch: {filename}")
 

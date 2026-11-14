@@ -18,6 +18,7 @@ EXPECTED_FILES = {"train.jsonl", "validation.jsonl"}
 
 
 def download_datasets(data_dir: Path) -> None:
+    # Load the approved S3 location and dataset checksums
     config = json.loads(CONFIG_PATH.read_text(encoding="utf-8"))
     manifest = json.loads(MANIFEST_PATH.read_text(encoding="utf-8"))
 
@@ -29,6 +30,7 @@ def download_datasets(data_dir: Path) -> None:
 
     objects = config["input_objects"]
 
+    # Allow only the training and validation datasets
     if set(objects) != EXPECTED_FILES:
         raise ValueError("Unexpected S3 input objects.")
 
@@ -38,12 +40,14 @@ def download_datasets(data_dir: Path) -> None:
     data_dir = Path(data_dir)
     data_dir.mkdir(parents=True, exist_ok=True)
 
+    # Refuse to overwrite files that already exist locally
     for filename in EXPECTED_FILES:
         if os.path.lexists(data_dir / filename):
             raise FileExistsError(
                 f"Refusing to overwrite: {data_dir / filename}"
             )
 
+    # Connect to S3 in the project's AWS region
     client = boto3.client("s3", region_name=config["region"])
     published_files = []
 
@@ -53,6 +57,7 @@ def download_datasets(data_dir: Path) -> None:
             temporary_path = None
 
             try:
+                # Download into a temporary file before publishing it
                 with tempfile.NamedTemporaryFile(
                     dir=data_dir,
                     prefix=f".{filename}.",
@@ -66,12 +71,14 @@ def download_datasets(data_dir: Path) -> None:
                     flush=True,
                 )
 
+                # Retrieve the approved dataset from S3
                 client.download_file(
                     config["bucket"],
                     objects[filename],
                     str(temporary_path),
                 )
 
+                # Compare the download size against the saved manifest
                 expected_size = manifest["datasets"][filename]["size_bytes"]
 
                 if temporary_path.stat().st_size != expected_size:
@@ -79,6 +86,7 @@ def download_datasets(data_dir: Path) -> None:
                         f"Downloaded file size mismatch: {filename}"
                     )
 
+                # Publish the completed download without overwriting a file
                 os.link(temporary_path, destination)
                 published_files.append(destination)
 
@@ -86,8 +94,10 @@ def download_datasets(data_dir: Path) -> None:
                 if temporary_path is not None:
                     temporary_path.unlink(missing_ok=True)
 
+        # Verify hashes and record counts for both downloaded files
         verify_datasets(data_dir)
 
+    # Remove files from this run if any download or validation fails
     except Exception:
         for path in published_files:
             path.unlink(missing_ok=True)

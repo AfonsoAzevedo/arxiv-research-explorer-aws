@@ -39,6 +39,7 @@ def build_completion_marker(run_dir: Path, run_id: str) -> dict:
     ):
         raise ValueError("Invalid run identifier.")
 
+    # Record the checksum and size of each artifact in the completed run
     checksums = {}
 
     for filename in sorted(REQUIRED_FILES):
@@ -65,6 +66,7 @@ def build_completion_marker(run_dir: Path, run_id: str) -> dict:
 def upload_artifacts(run_dir: Path, run_id: str) -> None:
     """Upload verified local artifacts without replacing existing S3 objects."""
 
+    # Load the destination S3 bucket and AWS region
     config = json.loads(CONFIG_PATH.read_text(encoding="utf-8"))
 
     if config["region"] != "us-east-1":
@@ -116,6 +118,7 @@ def upload_artifacts(run_dir: Path, run_id: str) -> None:
     ):
         raise ValueError("Training record count mismatch.")
 
+    # Confirm that the results belong to the approved validation dataset
     if validation["dataset"] != "2024_validation":
         raise ValueError("Unexpected evaluation dataset.")
 
@@ -124,12 +127,14 @@ def upload_artifacts(run_dir: Path, run_id: str) -> None:
 
     print("Local artifact consistency: VERIFIED", flush=True)
 
+    # Connect to S3 only after checking local artifact consistency
     client = boto3.client("s3", region_name=config["region"])
 
     bucket = config["bucket"]
     prefix = config["model_output_prefix"] + run_id + "/"
 
     # Refuse to publish into a previously used run prefix.
+    # Refuse to upload into a run location already used in S3
     existing = client.list_objects_v2(
         Bucket=bucket,
         Prefix=prefix,
@@ -157,6 +162,7 @@ def upload_artifacts(run_dir: Path, run_id: str) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             verification_path = Path(temporary) / filename
 
+            # Download each uploaded artifact to independently verify its checksum
             client.download_file(
                 bucket,
                 key,
@@ -172,6 +178,7 @@ def upload_artifacts(run_dir: Path, run_id: str) -> None:
 
     # Publish the completion marker only after every artifact
     # has been uploaded and independently verified.
+    # Publish the completion record only after every artifact is verified
     marker = build_completion_marker(run_dir, run_id)
     marker_bytes = (
         json.dumps(marker, indent=2, sort_keys=True) + "\n"

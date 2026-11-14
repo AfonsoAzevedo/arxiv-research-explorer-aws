@@ -1,129 +1,77 @@
-# AI Research Paper Discovery and Classification on AWS
+# AI Research Paper Explorer on AWS
 
-An end-to-end cloud computing and machine learning project for classifying scientific research abstracts and discovering related arXiv papers through semantic similarity.
+I built this project for DS483 Cloud Computing at Embry-Riddle Aeronautical University. I wanted to explore how AWS data engineering, traditional machine learning, and semantic search could work together to help people discover research papers.
 
-**Course:** DS483 Cloud Computing  
-**Institution:** Embry-Riddle Aeronautical University  
-**Developer:** Afonso Azevedo  
-**AWS Region:** us-east-1
-**Status:** Working local application; additional evaluation and data engineering in progress
+- **Developer:** Afonso Azevedo
+- **AWS region:** `us-east-1`
+- **Project:** AI Research Paper Discovery and Classification on AWS
+- **Status:** Working local Streamlit application with completed classification and retrieval evaluations
 
-## Project Overview
+## What I built
 
-This project combines supervised machine learning, vector similarity search, and Amazon Web Services to help users explore scientific literature.
+My application has two features:
 
-The application provides two capabilities:
+1. **Classify an abstract:** I use a saved TF-IDF and Logistic Regression pipeline to predict one of eight computer science categories.
+2. **Discover related papers:** I use Titan Text Embeddings V2 and FAISS to retrieve similar arXiv papers and display their metadata, similarity scores, and links.
 
-1. **Research Paper Classification:** Predict one of eight computer science research categories from a user-provided abstract using TF-IDF and Logistic Regression.
-2. **Semantic Paper Discovery:** Retrieve related arXiv papers using Amazon Titan Text Embeddings V2 and FAISS.
+The classification feature accepts new abstracts. My semantic search demonstration currently supports previously cached query embeddings only. This is intentional: submitting a query in the application does not generate a new paid Bedrock request.
 
-A local Streamlit application integrates both capabilities. The current semantic search demonstration uses previously cached query embeddings and does not make new Amazon Bedrock requests.
+I built and tested the application locally. I have not deployed it as a public service.
 
-## Application Features
+## Architecture
 
-The working Streamlit application supports:
-
-- Abstract classification with the three highest-ranked predicted categories
-- Semantic retrieval of five related papers from a 368-paper FAISS index
-- Paper titles, abstracts, categories, similarity scores, and arXiv links
-- Input validation and error handling
-- Cached-only semantic queries to avoid unapproved AWS usage
-
-The classification model produces probability estimates, but these probabilities have not been independently calibrated.
-
-**Important:** The semantic search interface currently supports only previously cached queries. Unrestricted live semantic search is not enabled in the application.
-
-## System Architecture
-
-The implemented components follow this workflow:
-
-### Classification Pipeline
-
-```text
-arXiv Metadata Dataset
-        |
-        v
-Data Validation and Preparation
-        |
-        v
-40,000 Labeled Training Abstracts
-        |
-        v
-Amazon EC2
-TF-IDF + Logistic Regression
-        |
-        v
-Amazon S3 Model Artifacts
-        |
-        v
-Local Production Classifier
-        |
-        v
-Streamlit Category Predictions
+```mermaid
+flowchart TD
+    A["arXiv metadata snapshot"] --> B["S3 raw JSONL"]
+    B --> C["Glue Data Catalog + Athena"]
+    C --> D["S3 Parquet data"]
+    A --> E["Chronological classification datasets"]
+    E --> F["EC2: TF-IDF + Logistic Regression"]
+    F --> G["Saved model artifacts in S3"]
+    G --> H["Streamlit classification"]
+    A --> I["Selected paper abstracts"]
+    I --> J["Bedrock Titan V2 embeddings"]
+    J --> K["Local FAISS index"]
+    K --> L["Streamlit cached semantic search"]
 ```
 
-### Semantic Search Pipeline
+I used AWS for data storage, SQL analysis, model training, and embedding generation. FAISS and the current Streamlit application run locally. The Streamlit app does not query Athena or call Bedrock during cached retrieval.
 
-```text
-Selected arXiv Papers
-        |
-        v
-Amazon Bedrock
-Titan Text Embeddings V2
-        |
-        v
-512-Dimensional Embeddings
-        |
-        v
-Local FAISS Index
-368 Papers
-        |
-        v
-Cached Query Embedding
-        |
-        v
-Similarity Search
-        |
-        v
-Streamlit Related Papers
-```
+### AWS services
 
-Amazon S3 stores verified project artifacts. Amazon Athena and AWS Glue Data Catalog were also tested with a small sample, but the complete 3.23-million-paper data engineering pipeline has not yet been implemented.
-
-The application does not execute Athena queries or invoke Bedrock when users submit cached semantic search queries.
-
-## Technology Stack
-
-| Component | Technology |
+| Service | How I used it |
 |---|---|
-| Cloud infrastructure | Amazon S3, EC2, IAM |
-| Cloud data engineering | Amazon Athena, AWS Glue Data Catalog |
-| Embedding generation | Amazon Bedrock Titan Text Embeddings V2 |
-| Programming | Python, SQL, Boto3 |
-| Classification | scikit-learn, TF-IDF, Logistic Regression |
-| Vector retrieval | FAISS IndexFlatIP |
-| Application | Streamlit |
-| Verified local Python version | 3.14.4 |
+| Amazon S3 | Store raw metadata, Parquet output, prepared datasets, and model artifacts |
+| AWS Glue Data Catalog | Define the schemas Athena uses to access my S3 data |
+| Amazon Athena | Query raw JSONL and Parquet tables using SQL |
+| Amazon EC2 | Train and evaluate the TF-IDF and Logistic Regression classifier |
+| Amazon Bedrock | Generate 512-dimensional Titan Text Embeddings V2 vectors |
+| IAM | Control access to AWS resources and services |
 
-FAISS is a local vector-search library, not an AWS managed service.
+## Data engineering
 
-## Dataset
+I started with the [Cornell University arXiv metadata snapshot](https://www.kaggle.com/datasets/Cornell-University/arxiv). My validated local snapshot contains **3,233,620 papers** and is approximately **5.28 GiB**.
 
-**Source:** [Cornell University arXiv Metadata on Kaggle](https://www.kaggle.com/datasets/Cornell-University/arxiv)
+I defined the raw JSONL table with Athena and the Glue Data Catalog, converted the records to SNAPPY-compressed Parquet, and ran validation and comparison queries. I kept the SQL steps in [`sql/`](sql/).
 
-The local metadata snapshot contains:
+For one category-frequency benchmark, I measured:
 
-- 3,233,620 validated paper records
-- Approximately 5.28 GiB of JSONL metadata
-- 176 research category labels
+| Measurement | Raw JSONL | Parquet |
+|---|---:|---:|
+| Bytes scanned | 5,667,856,783 | 9,417,392 |
+| Total query execution | 2,295 ms | 950 ms |
 
-The complete metadata dataset is not included in this repository.
+The Parquet query scanned **99.83% fewer bytes** in this recorded comparison. Its total execution time was **58.61% lower** for this run. These measurements describe this specific Athena benchmark, not a guaranteed speedup for every query.
 
-### Classification Categories
+I preserved the query details in [`data_engineering/results/category_benchmark.json`](data_engineering/results/category_benchmark.json). The complete arXiv dataset is not stored in GitHub.
 
-The production classifier predicts one of eight research categories:
+## Research paper classification
 
-| Category | Description |
+### Dataset and categories
+
+I selected eight arXiv categories:
+
+| Code | Category |
 |---|---|
 | `cs.AI` | Artificial Intelligence |
 | `cs.CL` | Computation and Language |
@@ -134,186 +82,164 @@ The production classifier predicts one of eight research categories:
 | `cs.NI` | Networking and Internet Architecture |
 | `cs.RO` | Robotics |
 
-### Classification Dataset Splits
+I used the first listed category in the metadata as the classification label. I normalized whitespace, removed abstracts shorter than 30 words, and removed exact duplicate abstract groups before splitting the data. This does not detect paraphrased or near-duplicate abstracts.
 
-The classifier uses a selected subset of the arXiv metadata dataset.
+I split papers by their original submission date to separate older training data from newer evaluation data:
 
-| Dataset | Samples | Purpose |
-|---|---:|---|
-| Training | 40,000 | Fit the classifier |
-| 2024 validation | 77,187 | Evaluate model performance |
-| 2025–2026 held-out test | Not yet evaluated | Final independent evaluation |
+| Split | Submission period | Papers |
+|---|---|---:|
+| Training | Before 2024 | 40,000 |
+| Validation | 2024 | 77,187 |
+| Held-out test | 2025 to 2026 | 207,257 |
 
-The training sample contains 5,000 examples per category. The model was not trained on all 3.23 million records.
+For training, I sampled **5,000 papers per category** with random seed 42. I kept the naturally imbalanced distributions in validation and testing. The dataset preparation script is [`classification/prepare_dataset.py`](classification/prepare_dataset.py).
 
-## Classification Model
+### Model
 
-The production model was trained on Amazon EC2 using:
+I trained a scikit-learn pipeline on EC2:
 
-- TF-IDF text features
-- Unigram and bigram representations
-- Up to 100,000 vocabulary features
-- Logistic Regression
-- Random seed 42 for reproducible training sampling
+1. **TF-IDF** converts abstracts into numerical features using individual words and two-word combinations. I limited the vocabulary to 100,000 features.
+2. **Logistic Regression** learns to assign one of the eight category labels from those features.
 
-The saved model and its evaluation artifacts were stored in Amazon S3. The locally restored production artifacts were verified against their recorded checksums.
+I fit the vectorizer and classifier using training data only. I evaluated the trained model separately and preserved model checksums and training metadata. The main implementation is in [`classification/train.py`](classification/train.py), with diagnostics in [`classification/diagnostics.py`](classification/diagnostics.py).
 
-### Verified Validation Results
+### Verified classification results
 
-Evaluation on 77,187 abstracts from the 2024 validation partition:
-
-| Metric | Result |
-|---|---:|
-| Accuracy | 80.59% |
-| Macro-F1 | 75.64% |
-| Training examples | 40,000 |
-| Validation examples | 77,187 |
-| Categories | 8 |
-
-**These are 2024 validation results, not final held-out test results.**
-
-The 2025–2026 test partition has not yet been evaluated. These metrics should not be interpreted as performance on unseen future research papers without that final evaluation.
-
-## Semantic Search
-
-Semantic retrieval uses Amazon Titan Text Embeddings V2 to represent abstracts as 512-dimensional vectors.
-
-The current application uses:
-
-- Normalized embedding vectors
-- FAISS IndexFlatIP for exact inner-product similarity search
-- A local search index containing 368 real arXiv papers
-- Previously cached query embeddings
-- The top five retrieved papers for a supported query
-
-The 368-paper index is a demonstration corpus, not an index of the full arXiv dataset.
-
-### Exploratory TF-IDF Comparison
-
-An earlier retrieval pilot compared semantic search with TF-IDF retrieval using a 312-paper corpus.
-
-| Metric | Semantic Search | TF-IDF |
+| Metric | 2024 validation | 2025 to 2026 held-out test |
 |---|---:|---:|
-| Broad Precision@3 | 44.44% | 22.22% |
-| Strict Precision@3 | 0.00% | 0.00% |
+| Papers evaluated | 77,187 | 207,257 |
+| Accuracy | 80.59% | 74.93% |
+| Macro-F1 | 75.64% | 72.63% |
+| Balanced accuracy | 79.94% | 76.59% |
 
-This exploratory evaluation used only three selected queries. Relevance judgments were proposed by an assistant and were not independently adjudicated.
+I froze the model before the final test and evaluated it once without retraining or tuning against the held-out results. The majority-class baseline on the test set was **26.88%**.
 
-**These results do not establish that semantic retrieval is generally superior to TF-IDF.** They also do not represent a comprehensive evaluation of the current 368-paper application index.
+The evaluation files are:
 
-## Local Installation
+- [`classification/results/model_freeze.json`](classification/results/model_freeze.json)
+- [`classification/results/final_test_2025_2026.json`](classification/results/final_test_2025_2026.json)
+- [`classification/evaluate.py`](classification/evaluate.py) for 2024 validation
+- [`classification/evaluate_test.py`](classification/evaluate_test.py) for the protected final test
 
-### 1. Clone the Repository
+These results are specific to my eight-category dataset. Label selection, near duplicates, and changes in the research literature are limitations.
+
+## Semantic paper discovery
+
+I generated normalized 512-dimensional embeddings with **Amazon Titan Text Embeddings V2** and used a local **FAISS IndexFlatIP** index to find the closest paper vectors.
+
+The working demonstration searches **368 arXiv papers**. This is a small research demonstration corpus, not an index of all 3.23 million papers.
+
+The Streamlit app retrieves the top five papers for a supported cached query. It displays titles, abstract previews, research categories, cosine similarity scores, and links to arXiv. With normalized query and paper vectors, inner-product ranking is equivalent to cosine-similarity ranking.
+
+The main retrieval modules are:
+
+- [`semantic_search/query_embedding.py`](semantic_search/query_embedding.py): validate and cache query embeddings
+- [`semantic_search/query_service.py`](semantic_search/query_service.py): reject uncached queries in offline mode
+- [`semantic_search/retrieval.py`](semantic_search/retrieval.py): load the FAISS index and return paper metadata
+- [`app/search_service.py`](app/search_service.py): connect retrieval to the Streamlit app
+
+### TF-IDF versus Titan evaluation
+
+I compared both retrieval methods using the same 368-paper corpus and ten existing-paper queries. I evaluated their rankings with **174 relevance judgments**.
+
+| Metric | TF-IDF | Titan V2 |
+|---|---:|---:|
+| Mean Precision@5 | 0.54 | 0.62 |
+| Mean nDCG@10 | 0.6315 | 0.6372 |
+
+The relevance grades were AI-proposed and approved by one assessor. They were not independently verified by multiple human reviewers. My experiment is small and includes a targeted cybersecurity expansion, so I cannot claim that Titan is always better than TF-IDF.
+
+I preserved the approved judgments, rankings, metrics, and evaluator in [`semantic_search/evaluation/`](semantic_search/evaluation/).
+
+## Run the application locally
+
+### 1. Clone the repository
 
 ```bash
 git clone https://github.com/AfonsoAzevedo/arxiv-research-explorer-aws.git
 cd arxiv-research-explorer-aws
 ```
 
-### 2. Create a Python Environment
+### 2. Install dependencies
 
-The verified development environment uses Python 3.14.4.
-
-On macOS or Linux:
+I tested the application locally using Python **3.14.4**. Create a virtual environment and install the recorded application dependencies:
 
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
+python -m pip install -r requirements-app.txt
 ```
 
-### 3. Install Application Dependencies
+A completely fresh installation on another machine has not yet been independently verified.
 
-```bash
-python -m pip install --upgrade pip
-python -m pip install --only-binary=:all: -r requirements-app.txt
-```
+### 3. Restore the saved artifacts
 
-The dependency versions match the environment used for the successful local application tests.
-
-Installation from a completely fresh environment has not yet been independently verified.
-
-### 4. Restore Required Artifacts
-
-The application expects these paths to exist:
+I intentionally excluded datasets, model binaries, FAISS indexes, and cached embeddings from GitHub. Before launching the full application, restore these files to their expected locations:
 
 ```text
 classification/models/full-40000-seed42/classifier.joblib
-
 semantic_search/data/faiss_368/index.faiss
 semantic_search/data/faiss_368/paper_ids.json
-semantic_search/data/retrieval_25k.jsonl
+semantic_search/data/application_368.jsonl
 semantic_search/data/application_query_cache/
 ```
 
-The production classifier, FAISS index, paper metadata, and cached query embeddings are excluded from Git version control.
+The training script saves production artifacts under a run directory named `full_40000_seed42`, while the current application expects its separately restored classifier under `full-40000-seed42`. These paths are not interchangeable without placing the model in the correct application location.
 
-A fresh clone therefore does **not** currently contain all the files needed for the full demonstration.
+I restored and tested the working artifacts locally, but they are not publicly distributed. A new GitHub clone cannot run the complete demonstration until the artifacts are restored. I also have not yet published a fully verified script to rebuild the exact 368-paper index from scratch.
 
-These artifacts must be restored from the project's previously generated and verified local or AWS artifacts. Public artifact distribution and complete regeneration instructions are not yet available.
-
-### 5. Run the Application
-
-From the repository root:
+### 4. Run Streamlit
 
 ```bash
 python -m streamlit run app/main.py --server.address 127.0.0.1 --server.port 8501
 ```
 
-Open:
+Open `http://127.0.0.1:8501`.
 
-http://127.0.0.1:8501
-
-The classification interface accepts new abstracts for local inference.
-
-For the current cached Semantic Search demonstration, use this exact query:
+For the cached semantic search demonstration, use this exact query:
 
 ```text
 Deep learning methods for detecting cybersecurity threats and network intrusions
 ```
 
-A different query without a cached embedding will be rejected without initiating an AWS Bedrock request.
+You can enter new abstracts for classification. An uncached semantic query produces a warning and does not invoke Bedrock.
 
-## Automated Tests
+## Tests and reproducibility
 
-The project includes five automated service tests for:
-
-- Classification inference
-- Empty classification input
-- Cached semantic retrieval
-- Uncached-query rejection
-- Empty semantic search input
-
-Run the tests from the repository root:
+I tested classifier inference, empty-input handling, cached semantic search, uncached-query rejection, and empty search input.
 
 ```bash
-python -m unittest tests/test_app_services.py -v
+python -m unittest discover -s tests -p 'test_app_services.py' -v
 ```
 
-**Verified on November 4, 2026:** All five tests passed.
+**Verified locally on November 13, 2026:** All five service tests passed. I also checked Streamlit startup, a classification example, five retrieved papers with working arXiv links, and the uncached-query warning.
 
-These tests require the locally restored model and retrieval artifacts. They are service-level tests and do not constitute a complete automated browser-testing suite.
+The automated tests require the saved local artifacts. These are service-level tests, not a complete browser test suite.
 
-## Current Limitations
+I preserved my SQL workflow, classification preparation and evaluation scripts, model-freeze metadata, retrieval judgments, and metric files in GitHub. I did not commit the full dataset, model binaries, credentials, private keys, or cached embeddings.
 
-- The full 3.23-million-paper S3/Athena/Parquet pipeline is not yet complete.
-- The current FAISS index contains 368 papers.
-- The local application supports cached semantic search queries only.
-- Retrieval evaluation remains preliminary and limited in scope.
-- Final classification performance on the 2025–2026 held-out test data has not been measured.
-- A new GitHub clone requires additional model and retrieval artifacts.
-- The application is verified locally but has not been publicly deployed.
-- Comprehensive AWS cost and application latency measurements are not yet documented.
+**Important:** Some embedding scripts support authorized paid Bedrock requests. Do not execute those modes as part of ordinary local setup or testing.
 
-## Next Steps
+## Project structure
 
-1. Complete the S3/Athena data engineering workflow.
-2. Expand and evaluate semantic search using a more representative retrieval corpus.
-3. Perform the final classification evaluation on the untouched held-out test dataset.
-4. Improve application reproducibility and artifact restoration instructions.
-5. Prepare the final project report, presentation, and demonstration.
+```text
+app/                  Streamlit interface and application services
+classification/       Dataset preparation, model training, and evaluations
+data_engineering/     Recorded Athena benchmark results
+semantic_search/      Embedding, retrieval, and evaluation code
+sql/                  Raw JSONL, Parquet, validation, and benchmark queries
+tests/                Offline application service tests
+requirements-app.txt Application dependencies
+```
 
-## Academic Context
+## Limitations and next steps
 
-This project is being developed individually for DS483 Cloud Computing at Embry-Riddle Aeronautical University.
+- My classifier predicts the first listed category rather than an independently verified single-topic label.
+- My dataset checks remove exact duplicate abstracts, not near duplicates.
+- The FAISS demonstration covers only 368 papers and cached query embeddings.
+- My retrieval evaluation uses ten queries and relevance judgments from a single assessor.
+- The repository does not publicly distribute the required local model and search artifacts.
+- I still need to document a verified regeneration path for the final 368-paper index.
+- The application has not been publicly deployed, and I have not reported comprehensive application latency or total AWS charges.
 
-It demonstrates the integration of cloud services, supervised text classification, semantic vector retrieval, and a Python web application, while distinguishing verified experimental results from planned improvements.
+I built the project individually for DS483 Cloud Computing. My goal was to connect real AWS data and machine learning workflows to a working application while keeping the experimental results and limitations transparent.
