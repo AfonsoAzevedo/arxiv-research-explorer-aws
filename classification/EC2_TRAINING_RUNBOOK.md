@@ -1,226 +1,127 @@
-# DS483 Classification: EC2 Training Runbook
+# DS483 EC2 Classification Training and Reproducibility
 
-## Project constraints
+I used Amazon EC2 to train my production TF-IDF and Logistic Regression classifier on 40,000 arXiv abstracts. This document explains the training workflow, the files I preserved, and the checks I use to protect my results.
 
-- AWS Region: `us-east-1`
-- Project budget: $40-50 total
-- Working mode: individual project
-- Production dataset: 40,000 labeled arXiv papers
-- Validation dataset: 77,187 papers from 2024
-- Protected test dataset: do not access during development
-- Full production training: **NOT AUTHORIZED**
+**AWS region:** `us-east-1`  
+**Project budget:** $40 to $50 usage target, not a measured final charge  
+**Status:** Production training, validation, and the single held-out test evaluation are complete
 
-Do not launch EC2, enable full training, or upload production artifacts
-without separate approval through the project overview workflow.
+This replaces my earlier planning checklist. I do not need to repeat the EC2 training run to demonstrate or evaluate the saved classifier.
 
-## 1. Verified local implementation
+## 1. Training data
 
-The classification pipeline uses:
+I prepared the datasets with `classification/prepare_dataset.py` from the full arXiv metadata snapshot.
 
-- TF-IDF with unigrams and bigrams
-- Logistic Regression
-- Eight primary arXiv categories
-- Deterministic training selection
-- Training diagnostics and reproducibility metadata
-- SHA-256 verification
-- Separate 2024 validation evaluation
+| Dataset | Papers | Submission period | Use |
+|---|---:|---|---|
+| Training | 40,000 | Before 2024 | Fit TF-IDF and Logistic Regression |
+| Validation | 77,187 | 2024 | Measure performance and review the model |
+| Held-out test | 207,257 | 2025 to 2026 | One final evaluation after freezing the model |
 
-A bounded 80-paper pilot was trained and evaluated locally.
+I sampled 5,000 training abstracts from each of eight categories using random seed 42. I left validation and test class frequencies unchanged. I removed exact duplicate abstract groups before splitting the data.
 
-These pilot results are not production-model results.
+My committed `classification/ec2-data-manifest.json` records the expected training and validation file sizes, record counts, and SHA-256 checksums.
 
-## 2. Verified source data
+## 2. AWS workflow
 
-Training:
+I used the following workflow:
 
-- File: `classification/data/train.jsonl`
-- Records: 40,000
-- Size: 58,052,946 bytes
-- SHA-256:
-  `d1aac2d0b524edda20cd8acf971a71d771c863523396d4b8c8db59ac6a985d29`
+1. I prepared and validated the training and validation datasets locally.
+2. I stored the datasets in Amazon S3.
+3. I prepared S3 download and integrity-check scripts for the approved files. The repository does not contain the full EC2 execution logs for these steps.
+4. I trained the TF-IDF and Logistic Regression pipeline on EC2.
+5. I evaluated the saved model on the separate 2024 validation data.
+6. I preserved the model, training diagnostics, reproducibility metadata, validation results, and S3 completion marker.
+7. I froze the model before the single 2025 to 2026 held-out test evaluation.
 
-Validation:
+The project used EC2 infrastructure in `us-east-1`. My earlier verified environment was an `m7i-flex.large` instance with Ubuntu 24.04, Python 3.12.3, 8 GiB RAM, and Systems Manager Session Manager access. I do not assume that instance or its exact configuration is still running.
 
-- File: `classification/data/validation.jsonl`
-- Records: 77,187
-- Size: 122,569,012 bytes
-- SHA-256:
-  `33ea85f638606a4780c149bd348dd9256056c7d18feb48ff7b6e978cf8f9a138`
+## 3. Source code and roles
 
-The S3 objects have matching reported sizes, but their contents
-have not yet been independently verified after EC2 download.
+| File | Purpose |
+|---|---|
+| `prepare_dataset.py` | Prepare chronological splits and remove exact duplicates |
+| `verify_ec2_data.py` | Verify downloaded dataset sizes, checksums, and record counts |
+| `download_ec2_data.py` | Download approved files from S3 without overwriting local data |
+| `train.py` | Build the TF-IDF and Logistic Regression pipeline and fit an authorized run |
+| `diagnostics.py` | Record fitting time, memory, warnings, and reproducibility metadata |
+| `evaluate.py` | Evaluate the fitted model on 2024 validation data |
+| `upload_ec2_artifacts.py` | Upload artifacts to S3 and independently verify their checksums |
+| `evaluate_test.py` | Run the protected held-out evaluation once with a frozen model |
 
-## 3. EC2 environment
+The training pipeline uses word unigrams and bigrams, up to 100,000 TF-IDF features, and Logistic Regression. I fit the vectorizer only on the training data.
 
-Previously verified infrastructure:
+## 4. Reproducibility checks
 
-- Instance type: `m7i-flex.large`
-- OS: Ubuntu 24.04
-- Python: 3.12.3
-- Memory: 8 GiB
-- Connection: AWS Systems Manager Session Manager
-- IAM role: `DS483-Arxiv-EC2-Role`
+My dataset manifest records these exact inputs:
 
-The previous test instance was terminated.
+| File | Records | Size in bytes | SHA-256 |
+|---|---:|---:|---|
+| `train.jsonl` | 40,000 | 58,052,946 | `d1aac2d0b524edda20cd8acf971a71d771c863523396d4b8c8db59ac6a985d29` |
+| `validation.jsonl` | 77,187 | 122,569,012 | `33ea85f638606a4780c149bd348dd9256056c7d18feb48ff7b6e978cf8f9a138` |
 
-Before launching another instance:
+I used `classification/verify_ec2_data.py` to check downloaded files against these values. The downloader uses temporary files and refuses to overwrite existing files.
 
-1. Obtain explicit approval.
-2. Review AWS cost and remaining budget.
-3. Confirm the intended IAM instance profile.
-4. Confirm SSM connectivity and instance health.
-5. Record the new instance ID and launch time.
+After training, I preserved the classifier as a joblib pipeline together with `training_metrics.json`, `reproducibility.json`, `validation_2024.json`, and a completion record. The model freeze and final-test result files record this classifier checksum:
 
-Do not assume the previous instance remains available.
+```text
+60f84cbc1d99a9cff44bf089cec25e0ba4343575cab51ca3a3218777f83533e1
+```
 
-## 4. Code and dependencies
+My training script creates a run directory named `full_40000_seed42`. The local Streamlit application uses a separately restored copy under `full-40000-seed42`. I need the correct directory name when restoring the app artifacts.
 
-Use the GitHub repository:
+## 5. Verified evaluation results
 
-`AfonsoAzevedo/arxiv-research-explorer-aws`
+| Metric | 2024 validation | 2025 to 2026 held-out test |
+|---|---:|---:|
+| Evaluated papers | 77,187 | 207,257 |
+| Accuracy | 80.59% | 74.93% |
+| Macro-F1 | 75.64% | 72.63% |
+| Balanced accuracy | 79.94% | 76.59% |
 
-Install dependencies into a dedicated Python virtual environment using:
+I recorded the final model configuration and SHA-256 before evaluating the held-out test set. I did not tune or replace the model after viewing those results.
 
-`classification/requirements-ec2.txt`
+My committed evidence is in:
 
-The pinned wheel dependencies resolved for Linux x86_64 / Python 3.12
-during a local download-only compatibility check.
+- `classification/results/model_freeze.json`
+- `classification/results/final_test_2025_2026.json`
 
-Actual Linux installation and imports remain unverified.
+The final evaluation is designed to run once. **Do not rerun `evaluate_test.py --run-final-test` as a routine verification command.** It rejects an existing final result or attempt file to protect the evaluation record.
 
-## 5. Download and verify datasets
+## 6. Safe local checks
 
-The downloader CLI was verified locally.
+These commands do not create AWS resources:
 
-On an approved EC2 instance, after installing dependencies and
-confirming the IAM role, run from the repository root:
+```bash
+python -m classification.verify_ec2_data --data-dir classification/data
+python -m classification.train --dry-run
+```
 
-    python3 -m classification.download_ec2_data --data-dir classification/data
+They require the prepared local files. I should run them only after confirming the paths and environment, and I should not overwrite or regenerate existing datasets during this documentation review.
 
-Use a fresh destination directory. The downloader refuses to
-overwrite existing training or validation files.
+The application service tests can be run separately:
 
-The overwrite rejection was observed directly on the Mac.
-A successful live S3 download on EC2 remains unverified.
+```bash
+python -m unittest discover -s tests -p 'test_app_services.py' -v
+```
 
-Required source objects:
+Those tests require the restored local model and FAISS artifacts. They do not retrain the classifier or contact AWS.
 
-- `s3://ds483-arxiv-test/classification/data/train.jsonl`
-- `s3://ds483-arxiv-test/classification/data/validation.jsonl`
+## 7. AWS cost and permissions
 
-The downloader is designed to:
+The S3 download and upload scripts make real AWS calls when executed. Full training on an EC2 instance also incurs cloud usage. I do not run these operations as part of documentation work.
 
-- Restrict downloads to approved objects
-- Refuse existing destination paths
-- Check downloaded file sizes
-- Check SHA-256 and record counts
-- Remove files published by a failed download run
+My code requires explicit confirmation for a full training run, but the confirmation string in the source is an execution safeguard, **not an AWS security credential**. IAM permissions still determine which AWS operations an instance can perform.
 
-Local mocked success, failure, and overwrite-protection tests passed.
+Before any new AWS execution, I would check the project budget, instance configuration, IAM permissions, data checksums, and existing artifacts. I would also plan resource cleanup and verify costs afterward.
 
-Actual EC2 downloads remain unverified.
+## 8. Limitations
 
-## 6. Linux smoke test
+- My labels come from the first listed arXiv category.
+- My duplicate checks do not identify paraphrased abstracts.
+- I trained on balanced categories but evaluated on naturally imbalanced recent papers.
+- Chronological shifts in the research literature may affect performance.
+- Model binaries and the large datasets are intentionally excluded from GitHub.
+- This runbook documents the completed workflow, but a fresh clone still requires access to the saved data and model artifacts.
 
-After environment and dataset verification:
-
-1. Confirm Python and package versions.
-2. Run the training CLI in dry-run mode.
-3. Train a bounded pilot of 80 or 800 records.
-4. Inspect convergence warnings, fit time, and peak RSS.
-5. Confirm all three model artifacts are present.
-6. Independently verify model SHA-256.
-7. Reload the trusted model and perform inference.
-8. Evaluate against the 2024 validation dataset.
-9. Verify the evaluation JSON and record its metrics.
-10. Confirm that full training remains disabled.
-
-Do not access the protected 2025-2026 test dataset.
-
-Do not proceed if the bounded pilot fails.
-
-## 7. Production training: blocked
-
-The current training CLI rejects `--full-train`.
-
-Production preflight checks have passed locally:
-
-- Exactly 40,000 training records
-- Exactly 5,000 papers in each category
-- Unique paper IDs
-- Expected source-file SHA-256
-- Exact match between provided inputs and verified source records
-
-An authorization helper exists but is not connected to model fitting.
-
-Production training must remain blocked until:
-
-1. Linux smoke testing succeeds.
-2. Runtime memory and costs are reviewed.
-3. The project overview separately approves execution.
-4. The production execution path is implemented and tested.
-
-No production accuracy or runtime may be reported before measurement.
-
-## 8. Artifact preservation
-
-The uploader expects:
-
-- `classifier.joblib`
-- `training_metrics.json`
-- `reproducibility.json`
-- `validation_2024.json`
-
-The intended S3 destination is:
-
-`s3://ds483-arxiv-test/classification/models/<run-id>/`
-
-Before upload, it checks local artifact consistency.
-
-For each artifact, it performs:
-
-1. Conditional upload without replacing an existing object
-2. Independent download
-3. SHA-256 verification
-
-After all four files pass verification, it publishes and verifies:
-
-`COMPLETE.json`
-
-Mocked tests passed for successful publication, overwrite protection,
-and an interrupted upload.
-
-Actual S3 IAM permissions and live upload behavior remain unverified.
-
-A completion marker is evidence of this uploader's successful checks,
-not an immutable guarantee against subsequent object modification.
-
-## 9. Cleanup and cost control
-
-Before terminating an EC2 instance:
-
-1. Confirm all required artifacts exist locally.
-2. Verify every required object in S3.
-3. Check `COMPLETE.json`.
-4. Record S3 object keys and checksums.
-5. Preserve logs and experiment metrics.
-6. Only then terminate the EC2 instance.
-7. Confirm the instance is terminated and no unexpected EBS volumes remain.
-8. Review AWS billing and budget alerts.
-
-Never report an estimated cloud cost as an actual measured charge.
-
-## 10. Remaining verification
-
-- [ ] Review and commit classification EC2 preparation code
-- [ ] Obtain approval for a bounded EC2 smoke test
-- [ ] Install pinned packages on Ubuntu 24.04 / Python 3.12
-- [ ] Download training and validation data from S3
-- [ ] Verify downloaded checksums and record counts
-- [ ] Run bounded Linux pilot
-- [ ] Check model reload, inference, diagnostics, and evaluation
-- [ ] Test live artifact upload and completion marker
-- [ ] Confirm cleanup and AWS charges
-- [ ] Obtain separate approval for full production training
-- [ ] Train and evaluate full 40,000-paper model
-- [ ] Preserve verified production artifacts and metrics
+I kept the source, integrity checks, and measured results so I can explain and verify the work without spending money rerunning the cloud experiment.
