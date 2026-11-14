@@ -16,7 +16,10 @@ from pathlib import Path
 import faiss
 import numpy as np
 
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
+# Allow read-only testing directly from a GitHub branch through standard input
+PROJECT_ROOT = (
+    Path.cwd() if __file__ == "<stdin>" else Path(__file__).resolve().parents[2]
+)
 DATA = PROJECT_ROOT / "semantic_search/data"
 
 # Locate the saved baseline, expansion files, and final provenance
