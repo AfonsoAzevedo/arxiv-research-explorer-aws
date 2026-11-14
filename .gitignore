@@ -46,3 +46,18 @@ backups/
 
 # Local semantic query authorization and request budgets
 semantic_search/config/
+
+# Keep the local one-shot final test guard out of GitHub
+classification/results/final_test_2025_2026.attempt.json
+
+# Preliminary account-wide AWS cost notes, not final project charges
+data_engineering/results/cost_reconciliation.json
+
+# Historical retrieval pilots and the ungraded review worksheet
+semantic_search/evaluation/blinded_relevance_pool_368.csv
+semantic_search/evaluation/cross_category_retrieval_results.json
+semantic_search/evaluation/deepfake_relevance_judgments.json
+semantic_search/evaluation/face_recognition_judgments.json
+semantic_search/evaluation/nell_query_judgments.json
+semantic_search/evaluation/retrieval_pilot_summary.json
+semantic_search/evaluation/wifi_security_judgments.json
