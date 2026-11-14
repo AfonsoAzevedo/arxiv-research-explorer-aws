@@ -2,9 +2,9 @@
 
 I used Amazon EC2 to train my production TF-IDF and Logistic Regression classifier on 40,000 arXiv abstracts. This document explains the training workflow, the files I preserved, and the checks I use to protect my results.
 
-**AWS region:** `us-east-1`  
-**Project budget:** $40 to $50 usage target, not a measured final charge  
-**Status:** Production training, validation, and the single held-out test evaluation are complete
+- **AWS region:** `us-east-1`
+- **Project budget:** $40 to $50 usage target, not a measured final charge
+- **Status:** Production training, validation, and the single held-out test evaluation are complete
 
 This replaces my earlier planning checklist. I do not need to repeat the EC2 training run to demonstrate or evaluate the saved classifier.
 

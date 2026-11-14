@@ -2,10 +2,10 @@
 
 I built this project for DS483 Cloud Computing at Embry-Riddle Aeronautical University. I wanted to explore how AWS data engineering, traditional machine learning, and semantic search could work together to help people discover research papers.
 
-**Developer:** Afonso Azevedo  
-**AWS region:** `us-east-1`  
-**Project:** AI Research Paper Discovery and Classification on AWS  
-**Status:** Working local Streamlit application with completed classification and retrieval evaluations
+- **Developer:** Afonso Azevedo
+- **AWS region:** `us-east-1`
+- **Project:** AI Research Paper Discovery and Classification on AWS
+- **Status:** Working local Streamlit application with completed classification and retrieval evaluations
 
 ## What I built
 
