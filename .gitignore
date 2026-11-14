@@ -43,3 +43,6 @@ semantic_search/data/
 
 # Local backups of generated research artifacts
 backups/
+
+# Local semantic query authorization and request budgets
+semantic_search/config/
