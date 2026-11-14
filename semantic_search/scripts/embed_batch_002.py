@@ -8,15 +8,18 @@ import math
 import os
 from pathlib import Path
 
+# Find the project folder so I can use consistent paths
 ROOT = Path(__file__).resolve().parents[2]
 DATA = ROOT / "semantic_search/data"
 BATCH = DATA / "embeddings_25k"
 
+# Identify the batch files that control requests and saved results
 MANIFEST = BATCH / "batch_002_manifest.json"
 AUTHORIZATION = BATCH / "batch_002_authorization.json"
 STATE = BATCH / "batch_002_state.json"
 LOCK = BATCH / "batch_002.lock"
 
+# Verify the exact manifest and dataset before using AWS
 EXPECTED_MANIFEST_SHA = (
     "fa392bed6537331ae8b8d9848115d62ef8164fb0b17b4fd72a76c589610fe710"
 )
@@ -24,19 +27,23 @@ EXPECTED_DATASET_SHA = (
     "3e2679c47a04166467ea3b848748787fe4fea62993568fc485eb891e0c639a7c"
 )
 
+# Configure Titan V2 for normalized 512-dimensional embeddings
 MODEL_ID = "amazon.titan-embed-text-v2:0"
 REGION = "us-east-1"
 DIMENSIONS = 512
 
 
+# Create a SHA-256 fingerprint of the input bytes
 def sha256(data):
     return hashlib.sha256(data).hexdigest()
 
 
+# Read a saved manifest, authorization, or checkpoint
 def load_json(path):
     return json.loads(path.read_text(encoding="utf-8"))
 
 
+# Save the updated checkpoint safely
 def atomic_json(path, value):
     """Write a new snapshot durably before replacing the previous one."""
     temporary = path.with_suffix(path.suffix + ".tmp")
@@ -48,6 +55,7 @@ def atomic_json(path, value):
     os.replace(temporary, path)
 
 
+# Verify the approved papers and input text before execution
 def verify_inputs():
     assert MANIFEST.is_file()
     assert sha256(MANIFEST.read_bytes()) == EXPECTED_MANIFEST_SHA
@@ -91,6 +99,7 @@ def verify_inputs():
     return manifest, inputs
 
 
+# Check previous requests so interrupted work is not repeated
 def load_state(manifest):
     if not STATE.exists():
         return {
@@ -123,6 +132,7 @@ def load_state(manifest):
     return state
 
 
+# This function can make paid AWS requests only when explicitly authorized
 def execute(manifest, inputs, state):
     import boto3
     from botocore.config import Config
@@ -145,6 +155,7 @@ def execute(manifest, inputs, state):
         a["status"] == "completed" for a in state["attempts"]
     ), "Unresolved request found. Manual review required."
 
+    # Lock the batch so two processes cannot send the same requests
     lock_fd = os.open(
         LOCK,
         os.O_CREAT | os.O_EXCL | os.O_WRONLY,
@@ -161,6 +172,7 @@ def execute(manifest, inputs, state):
             a["status"] == "completed" for a in state["attempts"]
         )
 
+        # Create the Bedrock client after the authorization and lock checks
         client = boto3.Session().client(
             "bedrock-runtime",
             region_name=REGION,
@@ -171,6 +183,7 @@ def execute(manifest, inputs, state):
             ),
         )
 
+        # Skip completed papers and process only the remaining inputs
         for paper in manifest["papers"]:
             paper_id = paper["paper_id"]
 
@@ -181,6 +194,7 @@ def execute(manifest, inputs, state):
             # The authorization caps distinct request attempts.
             assert len(state["attempts"]) < 100
 
+            # Count this attempt before sending the Bedrock request
             # Persist the request reservation BEFORE contacting AWS.
             state["attempts"].append({
                 "paper_id": paper_id,
@@ -202,6 +216,7 @@ def execute(manifest, inputs, state):
                 }),
             )
 
+            # Validate Titan's response before storing the embedding
             payload = json.loads(response["body"].read())
             vector = payload["embedding"]
 
@@ -241,6 +256,7 @@ def execute(manifest, inputs, state):
     print("BATCH EXECUTION COMPLETED")
 
 
+# Start in dry-run mode unless I explicitly pass --execute
 def main():
     parser = argparse.ArgumentParser()
     mode = parser.add_mutually_exclusive_group()
