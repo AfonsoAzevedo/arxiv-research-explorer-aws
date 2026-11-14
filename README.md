@@ -151,6 +151,26 @@ The relevance grades were AI-proposed and approved by one assessor. They were no
 
 I preserved the approved judgments, rankings, metrics, and evaluator in [`semantic_search/evaluation/`](semantic_search/evaluation/).
 
+### Reconstructing the final FAISS index
+
+The final index combines an existing 312-paper FAISS index with 56 additional cybersecurity-focused embeddings. I recorded the exact source file SHA-256 hashes in the local `faiss_368/provenance.json`.
+
+The reconstruction script is [`semantic_search/scripts/rebuild_faiss_368.py`](semantic_search/scripts/rebuild_faiss_368.py). It needs these generated local files, which are intentionally excluded from GitHub:
+
+- `semantic_search/data/faiss_312/index.faiss`
+- `semantic_search/data/faiss_312/paper_ids.json`
+- `semantic_search/data/embeddings_25k/cybersecurity_56_manifest.json`
+- `semantic_search/data/embeddings_25k/cybersecurity_56_state.json`
+- `semantic_search/data/faiss_368/provenance.json`
+
+After restoring those files and the saved final index, run:
+
+```bash
+python semantic_search/scripts/rebuild_faiss_368.py
+```
+
+**Verified locally on November 13, 2026:** all four source hashes matched provenance; the reconstruction contained 368 unique papers, passed 368/368 self-retrieval, and matched the saved final index vectors. This read-only check wrote no files and made no AWS requests. The script also supports an explicit `--output-dir` for a separate copy, but that writing mode has not yet been independently verified.
+
 ## Run the application locally
 
 ### 1. Clone the repository
@@ -186,7 +206,7 @@ semantic_search/data/application_query_cache/
 
 The training script saves production artifacts under a run directory named `full_40000_seed42`, while the current application expects its separately restored classifier under `full-40000-seed42`. These paths are not interchangeable without placing the model in the correct application location.
 
-I restored and tested the working artifacts locally, but they are not publicly distributed. A new GitHub clone cannot run the complete demonstration until the artifacts are restored. I also have not yet published a fully verified script to rebuild the exact 368-paper index from scratch.
+I restored and tested the working artifacts locally, but they are not publicly distributed. A new GitHub clone cannot run the complete demonstration until the artifacts are restored. The verified FAISS reconstruction check also needs the original 312-paper index and the 56-paper expansion checkpoint, which are not publicly distributed.
 
 ### 4. Run Streamlit
 
@@ -239,7 +259,7 @@ requirements-app.txt Application dependencies
 - The FAISS demonstration covers only 368 papers and cached query embeddings.
 - My retrieval evaluation uses ten queries and relevance judgments from a single assessor.
 - The repository does not publicly distribute the required local model and search artifacts.
-- I still need to document a verified regeneration path for the final 368-paper index.
+- Reconstructing the final 368-paper index was verified locally, but requires the preserved original baseline and expansion artifacts. Those inputs are not included in a public clone.
 - The application has not been publicly deployed, and I have not reported comprehensive application latency or total AWS charges.
 
 I built the project individually for DS483 Cloud Computing. My goal was to connect real AWS data and machine learning workflows to a working application while keeping the experimental results and limitations transparent.
