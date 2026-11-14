@@ -40,15 +40,18 @@ def evaluate_ranking(results, judgments, ideal_grades):
 
 def main():
     # Load the approved judgments, keyed by query and candidate paper.
+    # Read the approved relevance grades for each query and candidate paper
     with JUDGMENTS_PATH.open(
         encoding="utf-8-sig", newline=""
     ) as handle:
         rows = list(csv.DictReader(handle))
 
+    # Check that all 174 approved judgments are present
     assert len(rows) == 174
 
     judgments = {}
 
+    # Match every relevance grade to its query and paper ID
     for row in rows:
         key = (row["query_id"], row["candidate_id"])
         grade = int(row["relevance_grade"])
@@ -57,16 +60,19 @@ def main():
         assert key not in judgments
         judgments[key] = grade
 
+    # Load the saved TF-IDF and Titan rankings for the same 368 papers
     rankings = json.loads(RANKINGS_PATH.read_text())
     assert rankings["corpus_size"] == 368
     assert rankings["query_count"] == 10
 
     results = []
 
+    # Evaluate both retrieval methods using the same query
     for query in rankings["queries"]:
         query_id = query["query_id"]
 
         # The ideal ranking uses the pooled relevance judgments.
+        # Build the shared relevance pool from both methods' top results
         pool = {
             paper_id: grade
             for (qid, paper_id), grade in judgments.items()
@@ -80,11 +86,14 @@ def main():
         }
 
         assert set(pool) == expected_ids
+        # Use the best possible ordering to normalize nDCG
         ideal_grades = sorted(pool.values(), reverse=True)
 
+        # Calculate Precision@5 and nDCG@10 for TF-IDF
         tfidf = evaluate_ranking(
             query["tfidf_top_10"], pool, ideal_grades
         )
+        # Calculate the same metrics for Titan embeddings
         titan = evaluate_ranking(
             query["titan_top_10"], pool, ideal_grades
         )
@@ -101,6 +110,7 @@ def main():
     print("Judgments:", len(judgments))
     print()
 
+    # Average each metric across the ten evaluation queries
     for metric in ("precision_at_5", "ndcg_at_10"):
         lexical = [
             row["tfidf"][metric] for row in results

@@ -32,12 +32,14 @@ from classification.diagnostics import (
     train_with_diagnostics,
 )
 
+# Locate the prepared training dataset relative to this script
 CLASSIFICATION_DIR = Path(__file__).resolve().parent
 TRAIN_PATH = CLASSIFICATION_DIR / "data" / "train.jsonl"
 
 RANDOM_SEED = 42
 
 
+# I train the classifier on eight selected arXiv categories
 EXPECTED_CATEGORIES = frozenset({
     "cs.AI", "cs.CL", "cs.CR", "cs.CV",
     "cs.DB", "cs.LG", "cs.NI", "cs.RO",
@@ -56,6 +58,7 @@ def load_training_data(path: Path):
     seen_ids = set()
     seen_hashes = set()
 
+    # Read one JSONL record at a time and validate its fields
     with path.open("r", encoding="utf-8") as f:
         for line_number, line in enumerate(f, 1):
             paper = json.loads(line)
@@ -78,6 +81,7 @@ def load_training_data(path: Path):
             if not isinstance(digest, str) or len(digest) != 64:
                 raise ValueError(f"Invalid hash at line {line_number}")
 
+            # Recalculate the abstract hash to detect modified records
             normalized = " ".join(abstract.split()).lower()
             computed_hash = hashlib.sha256(
                 normalized.encode("utf-8")
@@ -107,11 +111,13 @@ def load_training_data(path: Path):
 
             created = created.astimezone(timezone.utc)
 
+            # Training must only contain papers submitted before 2024
             if created.year >= 2024:
                 raise ValueError(
                     f"Non-training date at line {line_number}"
                 )
 
+            # Reject duplicate paper IDs and identical abstracts
             if paper_id in seen_ids:
                 raise ValueError(f"Duplicate ID: {paper_id}")
 
@@ -134,6 +140,7 @@ def load_training_data(path: Path):
 def select_balanced_pilot(texts, labels, paper_ids, max_examples):
     """Select a deterministic, balanced subset for a bounded pilot."""
 
+    # Set up a smaller balanced sample for a controlled training pilot
     category_count = len(EXPECTED_CATEGORIES)
 
     if not (len(texts) == len(labels) == len(paper_ids)):
@@ -159,6 +166,7 @@ def select_balanced_pilot(texts, labels, paper_ids, max_examples):
             "Pilot size must be divisible by the number of categories."
         )
 
+    # Give every category the same number of pilot examples
     per_category = max_examples // category_count
     counts = Counter()
 
@@ -187,8 +195,10 @@ def select_balanced_pilot(texts, labels, paper_ids, max_examples):
     return selected_texts, selected_labels, selected_ids
 
 
+# Combine TF-IDF feature extraction and Logistic Regression in one pipeline
 def build_pipeline():
     return Pipeline([
+        # Convert abstracts into word and two-word TF-IDF features
         ("tfidf", TfidfVectorizer(
             lowercase=True,
             ngram_range=(1, 2),
@@ -198,6 +208,7 @@ def build_pipeline():
             sublinear_tf=True,
             dtype=np.float32,
         )),
+        # Configure Logistic Regression to predict one of eight categories
         ("classifier", LogisticRegression(
             C=1.0,
             max_iter=1000,
@@ -209,6 +220,7 @@ def build_pipeline():
 def verify_production_training_inputs(texts, labels, paper_ids):
     """Verify production inputs without fitting a model."""
 
+    # Verify the exact 40,000-paper dataset before production training
     expected_records = 40000
     expected_per_category = 5000
     expected_sha256 = (
@@ -231,6 +243,7 @@ def verify_production_training_inputs(texts, labels, paper_ids):
     if len(set(paper_ids)) != expected_records:
         raise ValueError("Duplicate paper IDs in production training inputs.")
 
+    # Compare the training file against its approved checksum
     actual_sha256 = hashlib.sha256()
 
     with TRAIN_PATH.open("rb") as stream:
@@ -265,6 +278,7 @@ def verify_production_training_inputs(texts, labels, paper_ids):
 def verify_production_authorization(full_train, approval_token):
     """Validate explicit production-training authorization."""
 
+    # Require an explicit confirmation before the full training run
     expected_token = "DS483_APPROVE_40000_TRAINING"
 
     if not full_train:
@@ -281,6 +295,7 @@ def verify_production_authorization(full_train, approval_token):
 
 
 def main():
+    # Select dry-run, bounded pilot, or approved full training from the CLI
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--dry-run",
@@ -350,6 +365,7 @@ def main():
     print("\nPipeline configuration:")
     print(pipeline)
 
+    # Inspect the input data without fitting or saving a model
     if args.dry_run:
         print("\nDRY RUN PASSED: No model was fitted or saved.")
         return
@@ -403,6 +419,7 @@ def main():
         print("FULL TRAINING COMPLETED", flush=True)
         return
 
+    # Run only the requested bounded pilot when selected
     if args.pilot:
         X, y, selected_ids = select_balanced_pilot(
             texts, labels, paper_ids, args.max_examples

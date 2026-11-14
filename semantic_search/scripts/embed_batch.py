@@ -8,9 +8,11 @@ import os
 import secrets
 from pathlib import Path
 
+# Locate the prepared embedding batches relative to the project folder
 ROOT = Path(__file__).resolve().parents[2]
 BATCH_DIRECTORY = ROOT / "semantic_search/data/embeddings_25k"
 
+# Use Titan V2 in us-east-1 with 512-dimensional embeddings
 MODEL_ID = "amazon.titan-embed-text-v2:0"
 REGION = "us-east-1"
 DIMENSIONS = 512
@@ -24,6 +26,7 @@ def load_json(path):
     return json.loads(path.read_text(encoding="utf-8"))
 
 
+# Check the batch configuration and source papers before any AWS request
 def verify_manifest(path, expected_sha):
     assert path.is_file(), "Manifest does not exist"
     assert sha256(path) == expected_sha, "Manifest checksum mismatch"
@@ -57,10 +60,12 @@ def verify_manifest(path, expected_sha):
     ids = [p["paper_id"] for p in papers]
     assert len(set(ids)) == len(ids)
 
+    # Confirm that the source dataset has not changed
     dataset = ROOT / manifest["source_dataset"]
     assert dataset.is_file()
     assert sha256(dataset) == manifest["source_dataset_sha256"]
 
+    # Match each approved paper ID to its expected input
     expected = {p["paper_id"]: p for p in papers}
     inputs = {}
 
@@ -78,6 +83,7 @@ def verify_manifest(path, expected_sha):
 
     assert set(inputs) == set(expected)
 
+    # Verify the text length and checksum for every planned request
     for paper_id, item in expected.items():
         text = inputs[paper_id]
 
@@ -96,6 +102,7 @@ def verify_manifest(path, expected_sha):
 
 
 
+# Save checkpoints safely so an interrupted run does not leave partial JSON
 def atomic_json(path, value):
     """Atomically replace a checkpoint, cleaning up failed writes."""
 
@@ -132,6 +139,7 @@ def atomic_json(path, value):
 
 
 
+# Require a separate authorization file for the exact embedding batch
 def verify_authorization(manifest, manifest_sha):
     """Verify explicit authorization for exactly one batch."""
 
@@ -166,6 +174,7 @@ def verify_authorization(manifest, manifest_sha):
 
 
 
+# Prevent two processes from executing the same batch at once
 def acquire_execution_lock(batch_id):
     """Create an exclusive lock with an ownership token."""
 
@@ -211,6 +220,7 @@ def release_execution_lock(lock_path, token):
     lock_path.unlink()
 
 
+# Examine previous requests before deciding whether a batch can continue
 def inspect_checkpoint(manifest, manifest_sha):
     """Inspect an existing request journal without modifying it."""
 
@@ -310,6 +320,7 @@ def inspect_checkpoint(manifest, manifest_sha):
 
 
 
+# Configure the Bedrock Runtime client without making a request
 def create_bedrock_client():
     """Create a region-specific Bedrock Runtime client.
 
@@ -329,6 +340,7 @@ def create_bedrock_client():
     )
 
 
+# Send only authorized requests and record each attempt before invoking Titan
 def execute_batch(manifest, manifest_sha, inputs, client, sleep_fn):
     """Execute one authorized batch with durable per-request journaling.
 
@@ -370,6 +382,7 @@ def execute_batch(manifest, manifest_sha, inputs, client, sleep_fn):
                 "results": {},
             }
 
+        # Skip papers whose embeddings were already saved
         for paper in manifest["papers"]:
             paper_id = paper["paper_id"]
 
@@ -383,6 +396,7 @@ def execute_batch(manifest, manifest_sha, inputs, client, sleep_fn):
             # Pacing occurs before reservation.
             sleep_fn(5)
 
+            # Reserve the request in the checkpoint before calling Bedrock
             state["attempts"].append({
                 "paper_id": paper_id,
                 "status": "reserved",
@@ -392,6 +406,7 @@ def execute_batch(manifest, manifest_sha, inputs, client, sleep_fn):
             atomic_json(state_path, state)
 
             # Never automatically retry a reserved attempt.
+            # Request one normalized embedding from Titan V2
             response = client.invoke_model(
                 modelId=MODEL_ID,
                 contentType="application/json",
@@ -420,6 +435,7 @@ def execute_batch(manifest, manifest_sha, inputs, client, sleep_fn):
             assert abs(norm - 1.0) < 0.01
             assert type(tokens) is int and tokens > 0
 
+            # Save the validated embedding and its token count
             state["results"][paper_id] = {
                 "embedding": vector,
                 "input_tokens": tokens,
@@ -453,6 +469,7 @@ def execute_batch(manifest, manifest_sha, inputs, client, sleep_fn):
 
 
 
+# Validate the checkpoint again while holding the execution lock
 def inspect_locked_state(manifest, manifest_sha):
     """Fully validate checkpoint while holding our execution lock."""
     import math
@@ -536,6 +553,7 @@ def inspect_locked_state(manifest, manifest_sha):
     return len(completed), len(attempts), len(unresolved)
 
 
+# Select a safe dry-run or a separately authorized execution
 def main():
     parser = argparse.ArgumentParser(
         description="Reusable Titan V2 embedding runner"

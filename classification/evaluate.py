@@ -22,6 +22,7 @@ VALIDATION_PATH = CLASSIFICATION_DIR / "data" / "validation.jsonl"
 def load_validation_data(path=VALIDATION_PATH):
     """Load 2024 validation records without modifying them."""
 
+    # Only allow the dedicated 2024 validation dataset
     if Path(path).resolve() != VALIDATION_PATH.resolve():
         raise ValueError("Only the designated 2024 validation file is allowed.")
 
@@ -29,6 +30,7 @@ def load_validation_data(path=VALIDATION_PATH):
     seen_ids = set()
     seen_hashes = set()
 
+    # Validate each record before using it for evaluation
     with VALIDATION_PATH.open(encoding="utf-8") as stream:
         for line_number, line in enumerate(stream, 1):
             paper = json.loads(line)
@@ -66,12 +68,14 @@ def load_validation_data(path=VALIDATION_PATH):
             if submitted.tzinfo is None:
                 raise ValueError(f"Missing timezone at line {line_number}")
 
+            # Keep the validation data separate from training and final testing
             if submitted.astimezone(timezone.utc).year != 2024:
                 raise ValueError(f"Invalid validation year at line {line_number}")
 
             if not isinstance(abstract, str) or len(abstract.split()) < 30:
                 raise ValueError(f"Invalid abstract at line {line_number}")
 
+            # Recalculate the abstract hash to check data integrity
             normalized = " ".join(abstract.split()).lower()
             computed_hash = hashlib.sha256(
                 normalized.encode("utf-8")
@@ -82,6 +86,7 @@ def load_validation_data(path=VALIDATION_PATH):
                     f"Abstract hash mismatch at line {line_number}"
                 )
 
+            # Reject duplicate papers and abstracts
             if paper_id in seen_ids or digest in seen_hashes:
                 raise ValueError(
                     f"Duplicate validation record at line {line_number}"
@@ -103,9 +108,11 @@ def load_validation_data(path=VALIDATION_PATH):
 def evaluate_classifier(model, texts, labels):
     """Evaluate an already fitted model without fitting or tuning it."""
 
+    # Predict categories without fitting or changing the model
     predictions = model.predict(texts)
     categories = sorted(EXPECTED_CATEGORIES)
 
+    # Calculate accuracy, macro-F1, and per-category results
     return {
         "records": len(labels),
         "accuracy": float(accuracy_score(labels, predictions)),
@@ -143,6 +150,7 @@ def save_evaluation_results(results, output_path):
     temporary_path = None
 
     try:
+        # Write to a temporary file before publishing evaluation results
         with tempfile.NamedTemporaryFile(
             mode="w",
             encoding="utf-8",
@@ -157,6 +165,7 @@ def save_evaluation_results(results, output_path):
             stream.flush()
             os.fsync(stream.fileno())
 
+        # Create the final result file without overwriting an earlier run
         os.link(temporary_path, output_path)
     finally:
         if temporary_path is not None:
@@ -194,6 +203,7 @@ def main():
     metadata_path = model_dir / "reproducibility.json"
     output_path = args.output.resolve()
 
+    # Check that the saved model and its metadata are available
     for path in (model_path, metrics_path, metadata_path):
         if not path.is_file():
             raise FileNotFoundError(f"Required artifact missing: {path}")
@@ -217,12 +227,14 @@ def main():
         for chunk in iter(lambda: stream.read(1024 * 1024), b""):
             digest.update(chunk)
 
+    # Verify that the model matches its recorded SHA-256 checksum
     if digest.hexdigest() != expected_hash:
         raise ValueError("Model checksum verification failed.")
 
     print("Model checksum: VERIFIED")
     print("Loading trusted local model:", model_path)
 
+    # Load the trusted trained model for validation inference
     model = joblib.load(model_path)
 
     print("Loading 2024 validation dataset...")

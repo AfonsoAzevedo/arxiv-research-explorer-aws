@@ -44,6 +44,7 @@ def sha256_file(path):
 
 def verify_frozen_model():
     """Require the approved model and unchanged training configuration."""
+    # Check the model freeze record before accessing final test results
     freeze = json.loads(FREEZE_PATH.read_text(encoding="utf-8"))
     metadata = json.loads(
         (MODEL_DIR / "reproducibility.json").read_text(encoding="utf-8")
@@ -52,6 +53,7 @@ def verify_frozen_model():
         (MODEL_DIR / "COMPLETE.json").read_text(encoding="utf-8")
     )
 
+    # Confirm the model and training configuration were frozen
     assert freeze["status"] == "frozen_before_final_test"
     assert freeze["model_sha256"] == EXPECTED_MODEL_SHA256
     assert freeze["pipeline_parameters"] == metadata["pipeline_parameters"]
@@ -73,6 +75,7 @@ def verify_frozen_model():
 def load_verified_test():
     """Validate the held-out test set without fitting a model."""
     manifest = json.loads(MANIFEST_PATH.read_text(encoding="utf-8"))
+    # Verify the exact protected test dataset
     assert sha256_file(TEST_PATH) == EXPECTED_TEST_SHA256
 
     categories = sorted(manifest["categories"])
@@ -81,6 +84,7 @@ def load_verified_test():
     seen_ids = set()
     seen_hashes = set()
 
+    # Validate the test records without modifying them
     with TEST_PATH.open(encoding="utf-8") as stream:
         for line_number, line in enumerate(stream, 1):
             record = json.loads(line)
@@ -123,6 +127,7 @@ def evaluate_once():
     freeze, model_path = verify_frozen_model()
     texts, labels, categories, distribution = load_verified_test()
 
+    # Prevent a second run of the held-out evaluation
     if OUTPUT_PATH.exists() or ATTEMPT_PATH.exists():
         raise FileExistsError("Final test evaluation already attempted or saved.")
 
@@ -133,6 +138,7 @@ def evaluate_once():
         "model_sha256": EXPECTED_MODEL_SHA256,
         "test_sha256": EXPECTED_TEST_SHA256,
     }
+    # Record the attempt before loading the model or making predictions
     with ATTEMPT_PATH.open("x", encoding="utf-8") as stream:
         json.dump(attempt, stream, indent=2)
         stream.write("\n")
@@ -142,8 +148,10 @@ def evaluate_once():
 
     # Load only the locally verified artifact produced by our own training.
     model = joblib.load(model_path)
+    # Evaluate the frozen model on unseen 2025-2026 papers
     predictions = model.predict(texts)
 
+    # Calculate a baseline that always predicts the largest category
     majority_count = max(distribution.values())
     results = {
         "evaluation": "single_final_held_out_test",
@@ -185,6 +193,7 @@ def evaluate_once():
     }
 
     # Create the final evidence file exclusively to prevent overwrites.
+    # Save final metrics without replacing any previous results
     with OUTPUT_PATH.open("x", encoding="utf-8") as stream:
         json.dump(results, stream, indent=2, sort_keys=True)
         stream.write("\n")
@@ -209,6 +218,7 @@ def main():
     )
     args = parser.parse_args()
 
+    # Require explicit confirmation for this one-time evaluation
     if not args.run_final_test:
         parser.error("Final evaluation requires --run-final-test.")
 

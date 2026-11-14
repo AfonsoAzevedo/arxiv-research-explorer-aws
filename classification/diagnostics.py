@@ -29,8 +29,10 @@ def sha256_file(path: Path) -> str:
 
 def train_with_diagnostics(pipeline, texts, labels):
     """Fit an explicitly supplied pipeline and measure its execution."""
+    # Measure how long model fitting takes
     start = time.perf_counter()
 
+    # Record warnings so I can check whether training converged
     with warnings.catch_warnings(record=True) as caught:
         warnings.simplefilter("always")
         pipeline.fit(texts, labels)
@@ -45,6 +47,7 @@ def train_with_diagnostics(pipeline, texts, labels):
         if issubclass(item.category, ConvergenceWarning)
     ]
 
+    # Collect training time, memory usage, features, and warnings
     diagnostics = {
         "training_records": len(texts),
         "training_seconds": elapsed,
@@ -75,6 +78,7 @@ def reproducibility_metadata(
     texts,
 ) -> dict:
     """Collect input checksum, versions, and model configuration."""
+    # Save the environment and exact training configuration for reproducibility
     return {
         "training_file_sha256": sha256_file(training_path),
         "training_sample_sha256": training_sample_fingerprint(
@@ -116,6 +120,7 @@ def save_training_artifacts(
             f"Artifact directory already exists: {output_dir}"
         )
 
+    # Build model artifacts in a temporary directory first
     temporary_dir = Path(
         tempfile.mkdtemp(
             prefix=f".{output_dir.name}.",
@@ -130,8 +135,10 @@ def save_training_artifacts(
         metrics_path = temporary_dir / "training_metrics.json"
         metadata_path = temporary_dir / "reproducibility.json"
 
+        # Save the fitted TF-IDF and Logistic Regression pipeline
         joblib.dump(pipeline, model_path)
 
+        # Include the model checksum with the measured training results
         saved_metrics = {
             **diagnostics,
             "serialized_model_mib": (
@@ -150,12 +157,14 @@ def save_training_artifacts(
             encoding="utf-8",
         )
 
+        # Make sure every required artifact was created
         for artifact in (model_path, metrics_path, metadata_path):
             if not artifact.is_file() or artifact.stat().st_size == 0:
                 raise RuntimeError(f"Incomplete artifact: {artifact}")
 
         # Publish the completed run atomically without replacing
         # an existing directory or symbolic link.
+        # Publish the completed run without replacing an existing one
         os.symlink(
             temporary_dir.name,
             output_dir,
@@ -194,6 +203,7 @@ def training_sample_fingerprint(
 
     digest = hashlib.sha256()
 
+    # Fingerprint each paper ID, category, and abstract in order
     for paper_id, label, abstract in zip(
         paper_ids, labels, texts
     ):
