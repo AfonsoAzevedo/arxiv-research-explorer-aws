@@ -232,6 +232,14 @@ I tested classifier inference, empty-input handling, cached semantic search, unc
 python -m unittest discover -s tests -p 'test_app_services.py' -v
 ```
 
+The published TF-IDF versus Titan retrieval metrics can also be reproduced using only the files already committed in GitHub. This check does not need the model, FAISS index, cached embeddings, or AWS:
+
+```bash
+python semantic_search/evaluation/evaluate_retrieval.py
+```
+
+**Verified locally on November 13, 2026:** The script reproduced the 10-query, 174-judgment evaluation with Precision@5 of 0.5400 (TF-IDF) and 0.6200 (Titan), and nDCG@10 of 0.6315 and 0.6372.
+
 **Verified locally on November 13, 2026:** All five service tests passed. I also checked Streamlit startup, a classification example, five retrieved papers with working arXiv links, and the uncached-query warning.
 
 The automated tests require the saved local artifacts. These are service-level tests, not a complete browser test suite.

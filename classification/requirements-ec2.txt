@@ -1,7 +1,8 @@
 # DS483 classification training environment
 # Target: Ubuntu 24.04, CPython 3.12, Linux x86-64
 # Dependency resolution verified locally on November 4, 2026.
-# Linux installation and execution are not yet verified.
+# Production training ran on EC2, but a fresh installation using this exact
+# pinned dependency file has not been independently verified.
 
 numpy==2.5.4
 scipy==1.18.1
