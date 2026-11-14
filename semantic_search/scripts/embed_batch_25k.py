@@ -8,6 +8,10 @@ import math
 import os
 from pathlib import Path
 
+# Refuse optimized Python because it disables checks guarding paid AWS requests
+if not __debug__:
+    raise RuntimeError("Do not run embedding batches with Python -O")
+
 # Find the project folder so I can use consistent paths
 ROOT = Path(__file__).resolve().parents[2]
 DATA = ROOT / "semantic_search/data"
