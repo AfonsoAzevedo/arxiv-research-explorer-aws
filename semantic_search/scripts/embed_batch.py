@@ -8,6 +8,10 @@ import os
 import secrets
 from pathlib import Path
 
+# Refuse optimized Python because it disables checks guarding paid AWS requests
+if not __debug__:
+    raise RuntimeError("Do not run embedding batches with Python -O")
+
 # Locate the prepared embedding batches relative to the project folder
 ROOT = Path(__file__).resolve().parents[2]
 BATCH_DIRECTORY = ROOT / "semantic_search/data/embeddings_25k"
